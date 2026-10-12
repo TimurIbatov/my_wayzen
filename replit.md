@@ -7,15 +7,19 @@ Personalized AI travel guide for Uzbekistan’s lesser-known places. Travelers b
 ```bash
 pnpm install
 
-# Schema (dev)
-pnpm --filter @workspace/db run push
+# Copy placeholders; set real secrets via Cursor/environment secrets (never paste into chat)
+cp .env.example .env
+
+# Schema (dev) — requires DATABASE_URL
+pnpm db:push
+# equivalent: pnpm --filter @workspace/db run push
 
 # Seed archive places (requires DATABASE_URL)
 pnpm seed
 # equivalent: pnpm --filter @workspace/db run seed
 
-# API (requires PORT, e.g. 5000)
-PORT=5000 pnpm --filter @workspace/api-server run dev
+# API (requires PORT + DATABASE_URL)
+PORT=5055 pnpm --filter @workspace/api-server run dev
 
 # Frontend (requires PORT + BASE_PATH)
 PORT=5173 BASE_PATH=/ pnpm --filter @workspace/wayzen run dev

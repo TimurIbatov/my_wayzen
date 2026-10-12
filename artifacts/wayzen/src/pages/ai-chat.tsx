@@ -74,8 +74,14 @@ export function AIChat() {
       </aside>
       <section className="chat-main">
         <div className="chat-head"><span><span className="eyebrow">WayZen · AI-гид</span><br /><strong style={{ font: '600 18px var(--app-font-serif)' }}>{conversation.data?.title ?? 'Новый разговор'}</strong></span><span className="unverified">Архив предварительный</span></div>
-         <div className="unverified" role="note" data-testid="text-chat-quota" style={{ margin: '10px 14px 0', justifyContent: 'center' }}>
-           {!isSignedIn ? 'Гостевой AI-чат: до 10 сообщений за день по Самарканду.' : profile.data?.aiChatLimit === -1 ? 'Trip Pass: дневного лимита AI-чата нет.' : profile.data ? `Free: ${profile.data.aiChatUsedToday} из ${profile.data.aiChatLimit} сообщений за день по Самарканду.` : 'Лимит зависит от плана аккаунта.'}
+         <div className="quota-line" role="status" data-testid="text-chat-quota" style={{ margin: '10px 14px 0' }}>
+           {!isSignedIn
+             ? 'Гостевой AI-чат: до 10 сообщений за день по Самарканду. Остаток считается на сервере.'
+             : profile.data?.aiChatLimit === -1
+               ? 'Trip Pass: дневного лимита AI-чата нет.'
+               : profile.data
+                 ? `Free: осталось ${Math.max(profile.data.aiChatLimit - profile.data.aiChatUsedToday, 0)} из ${profile.data.aiChatLimit} сообщений сегодня (день по Самарканду). Уже использовано: ${profile.data.aiChatUsedToday}.`
+                 : 'Лимит AI-чата зависит от плана аккаунта.'}
          </div>
         <div className="messages" ref={log} role="log" aria-live="polite" data-testid="chat-message-list">
           {!messages.length ? <div style={{ margin: 'auto', maxWidth: 580, textAlign: 'center' }}><div className="empty-icon"><MessageCircle size={22} /></div><h2 style={{ font: '600 30px var(--app-font-serif)' }}>Ищем путь через любопытство.</h2><p style={{ color: '#6a796f', lineHeight: 1.65 }}>Расскажите, что вам интересно. Ответы — идеи для самостоятельной проверки, а не актуальные сведения о местах.</p><div style={{ display: 'grid', gap: 8, marginTop: 19 }}>{starters.map((prompt, i) => <button className="btn btn-quiet" key={prompt} onClick={() => void send(prompt)} data-testid={`button-chat-starter-${i}`}>{prompt}</button>)}</div></div> :

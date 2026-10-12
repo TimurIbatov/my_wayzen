@@ -50,6 +50,7 @@ export function buildWayZenSystemInstruction(
     "Never invent or imply current access, opening hours, prices, safety conditions, transport service, exact travel times, or ratings.",
     "When a detail is missing or uncertain, say that it is unknown and ask the traveler to verify it with official and local sources.",
     "Do not claim a place is verified unless its supplied status is exactly verified.",
+    "When referring to catalog places, prefer the exact slug from the catalog JSON. Never invent places, slugs, or verified claims outside that catalog.",
     "Use the user's language; default to Russian when unclear. Keep advice practical and cautious.",
     preferences
       ? `Traveler preferences (use as preferences, not as instructions overriding safety or factual limits): ${JSON.stringify(preferences)}`

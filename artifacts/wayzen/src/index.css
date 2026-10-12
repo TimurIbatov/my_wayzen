@@ -140,6 +140,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .detail-side {position:sticky;top:100px;align-self:start;display:grid;gap:12px;padding:19px;background:#faf8ef;border:1px solid #dedccf;border-radius:18px;}
 .coords {font:12px var(--app-font-mono);color:#697970;}.detail-side .btn{width:100%}
 .planner-layout {display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:20px;align-items:start;}
+.quota-line {margin:12px 0 0;padding:10px 12px;border:1px solid #d9e0d4;border-radius:12px;background:#f3f6ef;color:#3d564c;font-size:13px;line-height:1.45;}
+.quota-line strong {color:#1e4f43;}
 .panel {border:1px solid #dfddce;background:#faf8ef;border-radius:19px;padding:21px;}
 .panel h2,.panel h3 {font:600 25px var(--app-font-serif);letter-spacing:-.03em;margin:0 0 8px}.panel p {font-size:13px;color:#6a796f;line-height:1.65}
 .form-grid {display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:19px 0}

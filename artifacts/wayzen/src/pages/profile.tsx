@@ -89,8 +89,20 @@ export function ProfilePage() {
             ? `Активен${expiryLabel ? ` до ${expiryLabel}` : ''}. Дневные лимиты AI сняты.`
             : 'Бесплатный план: 1 AI-маршрут и 10 сообщений чата за день по Самарканду.'}
         </p>
-        <p>AI-маршруты сегодня: {data.aiRoutesLimit < 0 ? 'без дневного лимита' : `${data.aiRoutesUsedToday} из ${data.aiRoutesLimit}`}.</p>
-        <p>Сообщения AI-чата сегодня: {data.aiChatLimit < 0 ? 'без дневного лимита' : `${data.aiChatUsedToday} из ${data.aiChatLimit}`}.</p>
+        <p data-testid="text-route-quota-profile">
+          AI-маршруты сегодня:{' '}
+          {data.aiRoutesLimit < 0
+            ? 'без дневного лимита'
+            : `осталось ${Math.max(data.aiRoutesLimit - data.aiRoutesUsedToday, 0)} из ${data.aiRoutesLimit} (использовано ${data.aiRoutesUsedToday})`}
+          .
+        </p>
+        <p data-testid="text-chat-quota-profile">
+          Сообщения AI-чата сегодня:{' '}
+          {data.aiChatLimit < 0
+            ? 'без дневного лимита'
+            : `осталось ${Math.max(data.aiChatLimit - data.aiChatUsedToday, 0)} из ${data.aiChatLimit} (использовано ${data.aiChatUsedToday})`}
+          .
+        </p>
         <p>Роль модератора: {data.isAdmin ? 'есть' : 'нет'}</p>
         {checkoutStatus === 'success' && <p role="status" data-testid="status-trip-pass-success">Оплата прошла. Если план ещё Free — обновите страницу после webhook Stripe.</p>}
         {checkoutStatus === 'cancelled' && <p role="status" data-testid="status-trip-pass-cancelled">Оплата отменена. План не изменён.</p>}

@@ -54,6 +54,89 @@ type RouteDraft = {
   days: { day: number; theme: string; stops: { placeSlug: string; note?: string }[] }[];
 };
 
+class RouteBuildError extends Error {
+  status: number;
+  constructor(message: string, status = 502) {
+    super(message);
+    this.name = "RouteBuildError";
+    this.status = status;
+  }
+}
+
+/** Normalize model output for catalog matching (slug or place name). */
+function normalizePlaceKey(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/['’`]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+type PlaceLookup = {
+  bySlug: Map<string, Place>;
+  byNormalized: Map<string, Place>;
+};
+
+function buildPlaceLookup(places: Place[]): PlaceLookup {
+  const bySlug = new Map(places.map((place) => [place.slug, place]));
+  const byNormalized = new Map<string, Place>();
+  for (const place of places) {
+    const keys = [
+      place.slug,
+      place.nameEn,
+      place.nameRu,
+      place.nameUz ?? "",
+    ]
+      .map(normalizePlaceKey)
+      .filter(Boolean);
+    for (const key of keys) {
+      // Prefer the first catalog entry; do not overwrite with later duplicates.
+      if (!byNormalized.has(key)) byNormalized.set(key, place);
+    }
+  }
+  return { bySlug, byNormalized };
+}
+
+/**
+ * Resolve a model-supplied placeSlug (or loose name) to a DB catalog place.
+ * Unknown / hallucinated identifiers are rejected. Always returns the canonical DB slug.
+ */
+function resolveCatalogPlace(
+  raw: string,
+  lookup: PlaceLookup,
+  seen: Set<string>,
+): Place {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    throw new RouteBuildError(
+      "The draft referenced an empty place slug. Only WayZen catalog slugs are allowed.",
+      422,
+    );
+  }
+  const exact = lookup.bySlug.get(trimmed);
+  const normalized = normalizePlaceKey(trimmed);
+  const place =
+    exact ??
+    lookup.bySlug.get(normalized) ??
+    lookup.byNormalized.get(normalized);
+  if (!place) {
+    throw new RouteBuildError(
+      `Rejected unknown place reference "${trimmed.slice(0, 80)}". Use only catalog placeSlug values from the archive.`,
+      422,
+    );
+  }
+  if (seen.has(place.slug)) {
+    throw new RouteBuildError(
+      `Rejected repeated place "${place.slug}". Each catalog place may appear only once in a draft.`,
+      422,
+    );
+  }
+  seen.add(place.slug);
+  return place;
+}
+
 function allowBurst(req: Request, res: ExpressResponse, scope: string, max: number): boolean {
   const now = Date.now();
   const ip = req.ip || req.socket.remoteAddress || "unknown";
@@ -352,11 +435,14 @@ router.post("/ai/routes", async (req, res) => {
           budget: parsed.data.budget,
           travelStyle: "",
         };
+    const allowedSlugs = candidates.map((place) => place.slug);
     const systemInstruction = [
       buildWayZenSystemInstruction(candidates, profileForPrompt),
-      "For route generation, use only the supplied catalog slugs. Do not add places or factual claims that are not in the catalog.",
+      "For route generation, every stop.placeSlug MUST be copied exactly from the allowed catalog slug list. Never invent slugs, names, or places outside that list.",
+      "Do not add factual claims that are not already present in the catalog. Never invent opening hours, prices, safety, or verified status.",
       "Return JSON only. The object must have title and days. Each day has day, theme, and stops; each stop has placeSlug and a short note about the itinerary's order, not invented site details.",
       "Do not generate travel or visit times; the application calculates visibly approximate planning estimates from coordinates.",
+      `Allowed placeSlug values (copy exactly): ${allowedSlugs.join(", ")}`,
     ].join("\n\n");
     const prompt = [
       `Create a ${parsed.data.days}-day draft itinerary in ${parsed.data.region ?? "Uzbekistan"}.`,
@@ -370,23 +456,33 @@ router.post("/ai/routes", async (req, res) => {
       prompt,
       parseRouteDraft,
     );
-    const placeBySlug = new Map(candidates.map((place) => [place.slug, place]));
+    if (!Array.isArray(draft.days) || draft.days.length === 0) {
+      throw new RouteBuildError(
+        "The archive does not support a useful draft for those preferences. Try fewer days or a wider area.",
+        422,
+      );
+    }
+    const lookup = buildPlaceLookup(candidates);
     const seen = new Set<string>();
+    const resolvedByDayStop = new Map<string, Place>();
     const paceMinutes =
       parsed.data.pace === "slow" ? 90 : parsed.data.pace === "balanced" ? 60 : 40;
     const days: TripDayData[] = draft.days.map((day, dayIndex) => {
       if (!Array.isArray(day.stops) || day.stops.length === 0) {
-        throw new Error("Gemini returned a day without catalog stops.");
+        throw new RouteBuildError(
+          "The draft included a day without catalog stops.",
+          422,
+        );
       }
       const stops: TripStopData[] = day.stops.map((stop, stopIndex) => {
-        const place = placeBySlug.get(stop.placeSlug);
-        if (!place || seen.has(place.slug)) {
-          throw new Error("Gemini returned an unknown or repeated place.");
-        }
-        seen.add(place.slug);
-        const previousStop = stopIndex > 0 ? placeBySlug.get(day.stops[stopIndex - 1]!.placeSlug) : undefined;
-        const estimatedTravelMinutes = previousStop
-          ? estimateRoadMinutes(previousStop, place)
+        const place = resolveCatalogPlace(stop.placeSlug, lookup, seen);
+        resolvedByDayStop.set(`${dayIndex}:${stopIndex}`, place);
+        const previous =
+          stopIndex > 0
+            ? resolvedByDayStop.get(`${dayIndex}:${stopIndex - 1}`)
+            : undefined;
+        const estimatedTravelMinutes = previous
+          ? estimateRoadMinutes(previous, place)
           : 0;
         const note =
           typeof stop.note === "string" && stop.note.trim()
@@ -407,7 +503,10 @@ router.post("/ai/routes", async (req, res) => {
       };
     });
     if (days.length !== parsed.data.days) {
-      throw new Error("Gemini returned the wrong number of itinerary days.");
+      throw new RouteBuildError(
+        "The draft did not match the requested number of itinerary days.",
+        422,
+      );
     }
     const approximateTotalMinutes = days
       .flatMap((day) => day.stops)
@@ -427,13 +526,16 @@ router.post("/ai/routes", async (req, res) => {
         "Архивные точки остаются предварительными. Минуты визита — лишь пожелание по темпу; переезды оценены по координатам, без дорожного маршрутизатора. Это не навигация и не подтверждение доступа, безопасности, часов или цен.",
     });
     return res.json(response);
-  } catch {
+  } catch (error) {
     if (reserved) {
       try {
         await releaseQuota(actorId, "routesUsed");
       } catch {
         // Keep the failure explicit even if the quota cannot be restored.
       }
+    }
+    if (error instanceof RouteBuildError) {
+      return res.status(error.status).json({ error: error.message });
     }
     return res.status(502).json({
       error: "Could not build a reliable draft from the current archive. Please try a different area or try again later.",
@@ -630,11 +732,11 @@ function parseRouteDraft(value: unknown): RouteDraft {
           throw new Error("Gemini returned an invalid itinerary stop.");
         }
         const stop = rawStop as Record<string, unknown>;
-        if (typeof stop.placeSlug !== "string") {
+        if (typeof stop.placeSlug !== "string" || !stop.placeSlug.trim()) {
           throw new Error("Gemini returned an invalid place slug.");
         }
         return {
-          placeSlug: stop.placeSlug,
+          placeSlug: stop.placeSlug.trim(),
           note: typeof stop.note === "string" ? stop.note : "",
         };
       }),

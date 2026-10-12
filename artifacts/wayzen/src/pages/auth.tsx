@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { SignIn, SignUp, useAuth } from '@clerk/react';
 import { Link, Redirect } from 'wouter';
 import { Brand } from '@/components/Brand';
@@ -13,15 +13,45 @@ export function ProtectedPortalRoute({ children }: { children: ReactNode }) {
   return isSignedIn ? <>{children}</> : <Redirect to="/" />;
 }
 
-function AuthUnavailable() {
+function AuthUnavailable({ reason }: { reason?: 'missing' | 'failed' }) {
   const { t } = useI18n();
   return (
     <div className="wz-auth-missing" data-testid="status-auth-unavailable" role="alert">
+      <span className="wz-kicker">Clerk</span>
       <h2>{t('auth.missingTitle')}</h2>
-      <p>{t('auth.missingCopy')}</p>
+      <p>{reason === 'failed' ? t('auth.failedCopy') : t('auth.missingCopy')}</p>
+      <code>VITE_CLERK_PUBLISHABLE_KEY=pk_test_…</code>
       <Link className="btn btn-primary" href="/ai" data-testid="link-auth-home">{t('auth.backHome')}</Link>
     </div>
   );
+}
+
+function ClerkAuthSlot({ children }: { children: ReactNode }) {
+  const { isLoaded } = useAuth();
+  const { t } = useI18n();
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    if (!isClerkConfigured()) return;
+    const timer = window.setTimeout(() => {
+      const mounted = document.querySelector('.auth-card .cl-rootBox, .auth-card .cl-cardBox, .auth-card .cl-card');
+      if (!mounted) setTimedOut(true);
+    }, 5000);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  if (!isClerkConfigured()) return <AuthUnavailable reason="missing" />;
+  if (timedOut) return <AuthUnavailable reason="failed" />;
+  if (!isLoaded) {
+    return (
+      <div className="wz-auth-missing" data-testid="status-auth-loading" aria-busy="true">
+        <span className="wz-kicker">Clerk</span>
+        <h2>{t('common.loading')}</h2>
+        <div className="skeleton" style={{ height: 120, borderRadius: 14 }} />
+      </div>
+    );
+  }
+  return <>{children}</>;
 }
 
 export function AuthScreen({ children }: { children: ReactNode }) {
@@ -37,7 +67,9 @@ export function AuthScreen({ children }: { children: ReactNode }) {
         </div>
         <span className="eyebrow" style={{ color: '#9bb8b2' }}>{t('auth.stamp')}</span>
       </section>
-      <section className="auth-card">{isClerkConfigured() ? children : <AuthUnavailable />}</section>
+      <section className="auth-card">
+        <ClerkAuthSlot>{children}</ClerkAuthSlot>
+      </section>
     </main>
   );
 }

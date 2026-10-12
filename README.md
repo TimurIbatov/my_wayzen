@@ -2,6 +2,8 @@
 
 Personalized AI travel guide for Uzbekistan hidden places.
 
+See **[`replit.md`](./replit.md)** for product description, full env list, run commands, and architecture notes.
+
 ## Monorepo
 
 pnpm workspaces:
@@ -13,10 +15,10 @@ pnpm workspaces:
 
 ```bash
 pnpm install
-pnpm --filter @workspace/wayzen run typecheck
+pnpm run typecheck
+pnpm db:push                 # apply schema (needs DATABASE_URL)
+pnpm seed                    # seed archive places (needs DATABASE_URL)
 PORT=5173 BASE_PATH=/ pnpm --filter @workspace/wayzen run build
-pnpm --filter @workspace/db run push   # apply schema (incl. trip_pass_expires_at)
-pnpm --filter @workspace/db run seed   # after DATABASE_URL is set
 ```
 
 Trip Pass (no secrets in repo): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_TRIP_PASS_PRICE_ID`, optional `STRIPE_SUCCESS_URL` / `STRIPE_CANCEL_URL` / `STRIPE_TRIP_PASS_DAYS`, `OFFLINE_MAPS_ENABLED`, `PUBLIC_APP_URL`. Demo activate remains DEV-only at `POST /api/me/trip-pass/demo`.

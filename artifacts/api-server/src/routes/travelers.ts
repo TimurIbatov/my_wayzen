@@ -5,6 +5,7 @@ import {
   AddFavoriteBody,
   AddFavoriteResponse,
   CreateTripBody,
+  CreateTripPassCheckoutResponse,
   CreateTripResponse,
   DeleteTripParams,
   DeleteTripResponse,
@@ -29,6 +30,13 @@ import {
   travelerProfilesTable,
   tripsTable,
 } from "@workspace/db";
+import { getStripe } from "../lib/stripe";
+import {
+  computeTripPassExpiry,
+  effectiveTravelPlan,
+  offlineMapsFeatureEnabled,
+  stripeConfigured,
+} from "../lib/tripPass";
 import { getOrCreateTravelerProfile } from "../lib/travelerProfiles";
 import {
   isWayZenAdmin,
@@ -80,6 +88,7 @@ export async function getChatUsage(actorId: string): Promise<number> {
 
 async function buildProfileResponse(userId: string) {
   const profile = await getOrCreateTravelerProfile(userId);
+  const plan = effectiveTravelPlan(profile);
   const [aiRoutesUsedToday, aiChatUsedToday] = await Promise.all([
     getRouteUsage(userId),
     getChatUsage(userId),
@@ -89,12 +98,15 @@ async function buildProfileResponse(userId: string) {
     pace: profile.pace,
     budget: profile.budget,
     travelStyle: profile.travelStyle,
-    plan: profile.plan,
+    plan,
+    tripPassExpiresAt:
+      plan === "trip_pass" ? (profile.tripPassExpiresAt?.toISOString() ?? null) : null,
     aiRoutesUsedToday,
-    aiRoutesLimit: profile.plan === "trip_pass" ? -1 : FREE_ROUTE_DAILY_LIMIT,
+    aiRoutesLimit: plan === "trip_pass" ? -1 : FREE_ROUTE_DAILY_LIMIT,
     aiChatUsedToday,
-    aiChatLimit: profile.plan === "trip_pass" ? -1 : FREE_CHAT_DAILY_LIMIT,
+    aiChatLimit: plan === "trip_pass" ? -1 : FREE_CHAT_DAILY_LIMIT,
     isAdmin: isWayZenAdmin(userId),
+    offlineMapsEnabled: offlineMapsFeatureEnabled(),
   });
 }
 
@@ -304,33 +316,61 @@ router.post("/me/trip-pass/demo", async (req, res) => {
   const userId = requireUserId(req, res);
   if (!userId) return;
   try {
-    const [profile] = await db
+    const expiresAt = computeTripPassExpiry();
+    await db
       .insert(travelerProfilesTable)
-      .values({ userId, plan: "trip_pass" })
+      .values({ userId, plan: "trip_pass", tripPassExpiresAt: expiresAt })
       .onConflictDoUpdate({
         target: travelerProfilesTable.userId,
-        set: { plan: "trip_pass" },
-      })
-      .returning();
-    const [aiRoutesUsedToday, aiChatUsedToday] = await Promise.all([
-      getRouteUsage(userId),
-      getChatUsage(userId),
-    ]);
-    return res.json(
-      ActivateDemoTripPassResponse.parse({
-        interests: profile.interests,
-        pace: profile.pace,
-        budget: profile.budget,
-        travelStyle: profile.travelStyle,
-        plan: profile.plan,
-        aiRoutesUsedToday,
-        aiRoutesLimit: -1,
-        aiChatUsedToday,
-        aiChatLimit: -1,
-        isAdmin: isWayZenAdmin(userId),
-      }),
-    );
+        set: { plan: "trip_pass", tripPassExpiresAt: expiresAt },
+      });
+    return res.json(ActivateDemoTripPassResponse.parse(await buildProfileResponse(userId)));
   } catch {
+    return sendServerError(res);
+  }
+});
+
+router.post("/me/trip-pass/checkout", async (req, res) => {
+  const userId = requireUserId(req, res);
+  if (!userId) return;
+  if (!stripeConfigured()) {
+    return res.status(503).json({
+      error: "Trip Pass checkout is not configured. Set STRIPE_SECRET_KEY and STRIPE_TRIP_PASS_PRICE_ID.",
+    });
+  }
+  const stripe = getStripe();
+  const priceId = process.env.STRIPE_TRIP_PASS_PRICE_ID?.trim();
+  if (!stripe || !priceId) {
+    return res.status(503).json({ error: "Trip Pass checkout is not configured." });
+  }
+  try {
+    const origin =
+      (typeof req.headers.origin === "string" && req.headers.origin) ||
+      process.env.PUBLIC_APP_URL?.replace(/\/$/, "") ||
+      "http://localhost:5173";
+    const successUrl =
+      process.env.STRIPE_SUCCESS_URL?.trim() ||
+      `${origin}/profile?trip_pass=success`;
+    const cancelUrl =
+      process.env.STRIPE_CANCEL_URL?.trim() ||
+      `${origin}/profile?trip_pass=cancelled`;
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      client_reference_id: userId,
+      metadata: {
+        userId,
+        product: "trip_pass",
+      },
+    });
+    if (!session.url) {
+      return res.status(503).json({ error: "Stripe did not return a checkout URL." });
+    }
+    return res.json(CreateTripPassCheckoutResponse.parse({ url: session.url }));
+  } catch (error) {
+    console.error("Trip Pass checkout failed.", error);
     return sendServerError(res);
   }
 });

@@ -382,12 +382,57 @@ paths:
       operationId: activateDemoTripPass
       tags: [travelers]
       summary: Activate a no-payment demo pass in development
+      description: Available only when NODE_ENV=development. Returns 404 in other environments.
       responses:
         "200":
           description: Updated plan
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Profile" }
+        "404":
+          description: Not available outside development
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /me/trip-pass/checkout:
+    post:
+      operationId: createTripPassCheckout
+      tags: [travelers]
+      summary: Create a Stripe Checkout session for Trip Pass
+      description: Requires STRIPE_SECRET_KEY and STRIPE_TRIP_PASS_PRICE_ID. No payment secrets are returned to the client.
+      responses:
+        "200":
+          description: Checkout session URL
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TripPassCheckout" }
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: Stripe is not configured
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /billing/stripe/webhook:
+    post:
+      operationId: handleStripeWebhook
+      tags: [travelers]
+      summary: Stripe webhook for Trip Pass purchases
+      description: Verifies STRIPE_WEBHOOK_SECRET. On checkout.session.completed with product trip_pass, sets plan=trip_pass and expiry.
+      responses:
+        "200":
+          description: Event acknowledged
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StripeWebhookAck" }
+        "400":
+          description: Invalid signature or payload
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /storage/uploads/request-url:
     post:
       operationId: requestUploadUrl
@@ -674,22 +719,42 @@ components:
         budget: { type: string, enum: [budget, moderate, comfort] }
         travelStyle: { type: string }
         plan: { type: string, enum: [free, trip_pass] }
+        tripPassExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: ISO expiry for an active Trip Pass; null means no expiry recorded
         aiRoutesUsedToday: { type: integer }
         aiRoutesLimit: { type: integer }
         aiChatUsedToday: { type: integer }
         aiChatLimit: { type: integer }
         isAdmin: { type: boolean }
+        offlineMapsEnabled:
+          type: boolean
+          description: Server feature flag for the offline-maps stub (never implies download works)
       required:
         - interests
         - pace
         - budget
         - travelStyle
         - plan
+        - tripPassExpiresAt
         - aiRoutesUsedToday
         - aiRoutesLimit
         - aiChatUsedToday
         - aiChatLimit
         - isAdmin
+        - offlineMapsEnabled
+    TripPassCheckout:
+      type: object
+      properties:
+        url: { type: string, format: uri }
+      required: [url]
+    StripeWebhookAck:
+      type: object
+      properties:
+        received: { type: boolean }
+      required: [received]
     ProfileInput:
       type: object
       properties:

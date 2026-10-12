@@ -15,9 +15,13 @@ export interface Profile {
   budget: ProfileBudget;
   travelStyle: string;
   plan: ProfilePlan;
+  /** ISO expiry for an active Trip Pass; null means no expiry recorded */
+  tripPassExpiresAt: Date | null;
   aiRoutesUsedToday: number;
   aiRoutesLimit: number;
   aiChatUsedToday: number;
   aiChatLimit: number;
   isAdmin: boolean;
+  /** Server feature flag for the offline-maps stub (never implies download works) */
+  offlineMapsEnabled: boolean;
 }

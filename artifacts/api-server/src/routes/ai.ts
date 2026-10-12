@@ -25,6 +25,7 @@ import {
   type TripStopData,
 } from "@workspace/db";
 import { Router, type Request, type Response as ExpressResponse } from "express";
+import { hasActiveTripPass } from "../lib/tripPass";
 import { getOrCreateTravelerProfile } from "../lib/travelerProfiles";
 import {
   buildWayZenSystemInstruction,
@@ -209,7 +210,7 @@ async function runChatStream({
   messages: ChatLine[];
   conversationId?: number;
 }): Promise<void> {
-  const unlimited = profile?.plan === "trip_pass";
+  const unlimited = hasActiveTripPass(profile);
   let reserved = false;
   let userMessageId: number | undefined;
   let provider: globalThis.Response | undefined;
@@ -305,7 +306,7 @@ router.post("/ai/routes", async (req, res) => {
   let reserved = false;
   try {
     const profile = userId ? await getOrCreateTravelerProfile(userId) : undefined;
-    const unlimited = profile?.plan === "trip_pass";
+    const unlimited = hasActiveTripPass(profile);
     const allPlaces = await loadCatalog();
     const candidates = parsed.data.region
       ? allPlaces.filter((place) => place.region === parsed.data.region)

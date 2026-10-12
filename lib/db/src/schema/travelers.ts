@@ -43,6 +43,7 @@ export const travelerProfilesTable = pgTable("wayzen_traveler_profiles", {
   budget: text("budget").$type<TravelBudget>().notNull().default("moderate"),
   travelStyle: text("travel_style").notNull().default(""),
   plan: text("plan").$type<TravelPlan>().notNull().default("free"),
+  tripPassExpiresAt: timestamp("trip_pass_expires_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow()

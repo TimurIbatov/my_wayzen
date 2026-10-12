@@ -10,6 +10,7 @@ import {
   clerkProxyMiddleware,
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
+import { stripeWebhookHandler } from "./routes/stripeWebhook";
 
 const app: Express = express();
 app.set("trust proxy", 1);
@@ -36,6 +37,12 @@ app.use(
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(cors({ credentials: true, origin: true }));
+// Stripe signatures require the raw body; mount before JSON parsing.
+app.post(
+  "/api/billing/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  stripeWebhookHandler,
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(

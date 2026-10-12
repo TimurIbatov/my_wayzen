@@ -37,8 +37,10 @@ import type {
   Profile,
   ProfileInput,
   RouteGenerationInput,
+  StripeWebhookAck,
   Trip,
   TripInput,
+  TripPassCheckout,
   TripUpdate,
   UploadUrlRequest,
   UploadUrlResponse,
@@ -2115,6 +2117,7 @@ export const getActivateDemoTripPassUrl = () => {
 }
 
 /**
+ * Available only when NODE_ENV=development. Returns 404 in other environments.
  * @summary Activate a no-payment demo pass in development
  */
 export const activateDemoTripPass = async ( options?: Parameters<typeof customFetch>[1]): Promise<Profile> => {
@@ -2134,7 +2137,7 @@ export const activateDemoTripPass = async ( options?: Parameters<typeof customFe
 
 export const getActivateDemoTripPassMutationKey = () => ['activateDemoTripPass'] as const;
 
-export const getActivateDemoTripPassMutationOptions = <TError = ErrorType<unknown>,
+export const getActivateDemoTripPassMutationOptions = <TError = ErrorType<Error>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activateDemoTripPass>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof activateDemoTripPass>>, TError,void, TContext> => {
 
@@ -2163,13 +2166,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ActivateDemoTripPassMutationResult = NonNullable<Awaited<ReturnType<typeof activateDemoTripPass>>>
 
-    export type ActivateDemoTripPassMutationError = ErrorType<unknown>
+    export type ActivateDemoTripPassMutationError = ErrorType<Error>
 
 
     /**
  * @summary Activate a no-payment demo pass in development
  */
-export const useActivateDemoTripPass = <TError = ErrorType<unknown>,
+export const useActivateDemoTripPass = <TError = ErrorType<Error>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activateDemoTripPass>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof activateDemoTripPass>>,
@@ -2178,6 +2181,156 @@ export const useActivateDemoTripPass = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getActivateDemoTripPassMutationOptions(options));
+    }
+
+export const getCreateTripPassCheckoutUrl = () => {
+
+
+
+
+  return `/api/me/trip-pass/checkout`
+}
+
+/**
+ * Requires STRIPE_SECRET_KEY and STRIPE_TRIP_PASS_PRICE_ID. No payment secrets are returned to the client.
+ * @summary Create a Stripe Checkout session for Trip Pass
+ */
+export const createTripPassCheckout = async ( options?: Parameters<typeof customFetch>[1]): Promise<TripPassCheckout> => {
+
+  return customFetch<TripPassCheckout>(getCreateTripPassCheckoutUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCreateTripPassCheckoutMutationKey = () => ['createTripPassCheckout'] as const;
+
+export const getCreateTripPassCheckoutMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTripPassCheckout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTripPassCheckout>>, TError,void, TContext> => {
+
+const mutationKey = getCreateTripPassCheckoutMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTripPassCheckout>>, void> = () => {
+
+
+          return  createTripPassCheckout(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTripPassCheckoutMutationResult = NonNullable<Awaited<ReturnType<typeof createTripPassCheckout>>>
+
+    export type CreateTripPassCheckoutMutationError = ErrorType<Error>
+
+
+    /**
+ * @summary Create a Stripe Checkout session for Trip Pass
+ */
+export const useCreateTripPassCheckout = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTripPassCheckout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTripPassCheckout>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCreateTripPassCheckoutMutationOptions(options));
+    }
+
+export const getHandleStripeWebhookUrl = () => {
+
+
+
+
+  return `/api/billing/stripe/webhook`
+}
+
+/**
+ * Verifies STRIPE_WEBHOOK_SECRET. On checkout.session.completed with product trip_pass, sets plan=trip_pass and expiry.
+ * @summary Stripe webhook for Trip Pass purchases
+ */
+export const handleStripeWebhook = async ( options?: Parameters<typeof customFetch>[1]): Promise<StripeWebhookAck> => {
+
+  return customFetch<StripeWebhookAck>(getHandleStripeWebhookUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getHandleStripeWebhookMutationKey = () => ['handleStripeWebhook'] as const;
+
+export const getHandleStripeWebhookMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof handleStripeWebhook>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof handleStripeWebhook>>, TError,void, TContext> => {
+
+const mutationKey = getHandleStripeWebhookMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof handleStripeWebhook>>, void> = () => {
+
+
+          return  handleStripeWebhook(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type HandleStripeWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof handleStripeWebhook>>>
+
+    export type HandleStripeWebhookMutationError = ErrorType<Error>
+
+
+    /**
+ * @summary Stripe webhook for Trip Pass purchases
+ */
+export const useHandleStripeWebhook = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof handleStripeWebhook>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof handleStripeWebhook>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getHandleStripeWebhookMutationOptions(options));
     }
 
 export const getRequestUploadUrlUrl = () => {

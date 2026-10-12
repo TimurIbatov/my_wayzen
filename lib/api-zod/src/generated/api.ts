@@ -136,11 +136,13 @@ export const GetProfileResponse = zod.object({
   "budget": zod.enum(['budget', 'moderate', 'comfort']),
   "travelStyle": zod.string(),
   "plan": zod.enum(['free', 'trip_pass']),
+  "tripPassExpiresAt": zod.coerce.date().nullable().describe('ISO expiry for an active Trip Pass; null means no expiry recorded'),
   "aiRoutesUsedToday": zod.number().int(),
   "aiRoutesLimit": zod.number().int(),
   "aiChatUsedToday": zod.number().int(),
   "aiChatLimit": zod.number().int(),
-  "isAdmin": zod.boolean()
+  "isAdmin": zod.boolean(),
+  "offlineMapsEnabled": zod.boolean().describe('Server feature flag for the offline-maps stub (never implies download works)')
 })
 
 
@@ -164,11 +166,13 @@ export const UpdateProfileResponse = zod.object({
   "budget": zod.enum(['budget', 'moderate', 'comfort']),
   "travelStyle": zod.string(),
   "plan": zod.enum(['free', 'trip_pass']),
+  "tripPassExpiresAt": zod.coerce.date().nullable().describe('ISO expiry for an active Trip Pass; null means no expiry recorded'),
   "aiRoutesUsedToday": zod.number().int(),
   "aiRoutesLimit": zod.number().int(),
   "aiChatUsedToday": zod.number().int(),
   "aiChatLimit": zod.number().int(),
-  "isAdmin": zod.boolean()
+  "isAdmin": zod.boolean(),
+  "offlineMapsEnabled": zod.boolean().describe('Server feature flag for the offline-maps stub (never implies download works)')
 })
 
 
@@ -706,6 +710,7 @@ export const DeletePlaceResponse = zod.void()
 
 
 /**
+ * Available only when NODE_ENV=development. Returns 404 in other environments.
  * @summary Activate a no-payment demo pass in development
  */
 export const ActivateDemoTripPassResponse = zod.object({
@@ -714,11 +719,31 @@ export const ActivateDemoTripPassResponse = zod.object({
   "budget": zod.enum(['budget', 'moderate', 'comfort']),
   "travelStyle": zod.string(),
   "plan": zod.enum(['free', 'trip_pass']),
+  "tripPassExpiresAt": zod.coerce.date().nullable().describe('ISO expiry for an active Trip Pass; null means no expiry recorded'),
   "aiRoutesUsedToday": zod.number().int(),
   "aiRoutesLimit": zod.number().int(),
   "aiChatUsedToday": zod.number().int(),
   "aiChatLimit": zod.number().int(),
-  "isAdmin": zod.boolean()
+  "isAdmin": zod.boolean(),
+  "offlineMapsEnabled": zod.boolean().describe('Server feature flag for the offline-maps stub (never implies download works)')
+})
+
+
+/**
+ * Requires STRIPE_SECRET_KEY and STRIPE_TRIP_PASS_PRICE_ID. No payment secrets are returned to the client.
+ * @summary Create a Stripe Checkout session for Trip Pass
+ */
+export const CreateTripPassCheckoutResponse = zod.object({
+  "url": zod.string().url()
+})
+
+
+/**
+ * Verifies STRIPE_WEBHOOK_SECRET. On checkout.session.completed with product trip_pass, sets plan=trip_pass and expiry.
+ * @summary Stripe webhook for Trip Pass purchases
+ */
+export const HandleStripeWebhookResponse = zod.object({
+  "received": zod.boolean()
 })
 
 

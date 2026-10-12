@@ -123,7 +123,15 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .map-point {position:absolute;transform:translate(-50%,-50%);border:0;background:#1c6556;color:white;border-radius:99px;padding:8px 11px;display:flex;gap:7px;align-items:center;font-size:11px;font-weight:700;box-shadow:0 4px 13px rgba(34,70,55,.19);cursor:pointer;transition:transform .2s,background .2s;max-width:200px;white-space:nowrap;}
 .map-point:hover,.map-point.selected {transform:translate(-50%,-50%) scale(1.05);background:#b45e43;z-index:3;}
 .map-point span {overflow:hidden;text-overflow:ellipsis;}
-.map-disclaimer {position:absolute;bottom:15px;left:15px;right:15px;background:rgba(250,248,239,.91);padding:10px 13px;border-radius:12px;color:#65766c;font-size:11px;line-height:1.5;backdrop-filter:blur(7px);}
+.map-disclaimer {position:absolute;bottom:15px;left:15px;right:15px;background:rgba(250,248,239,.91);padding:10px 13px;border-radius:12px;color:#65766c;font-size:11px;line-height:1.5;backdrop-filter:blur(7px);z-index:500;}
+.wayzen-cluster {display:grid;place-items:center;border-radius:999px;background:#1c6556;color:#fff8e8;border:2px solid #fff8e8;box-shadow:0 4px 14px rgba(28,101,86,.28);font:700 12px var(--app-font-mono);}
+.wayzen-cluster span{line-height:1}
+.wayzen-cluster-sm{width:34px;height:34px}
+.wayzen-cluster-md{width:40px;height:40px;font-size:13px}
+.wayzen-cluster-lg{width:46px;height:46px;font-size:14px;background:#b55f45}
+.leaflet-container{font:inherit;z-index:1}
+.marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background:transparent!important}
+.marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background:transparent!important}
 .detail-hero { min-height:310px;display:flex;align-items:end;padding:clamp(25px,5vw,56px);border-radius:24px;overflow:hidden;position:relative;color:#f5f0df;background:linear-gradient(110deg,#154d44,#347662 58%,#bd9b66); }
 .detail-hero:after {content:"";position:absolute;right:7%;top:-35%;width:350px;aspect-ratio:1;border:1px solid rgba(255,255,255,.27);border-radius:50%;box-shadow:0 0 0 27px rgba(255,255,255,.05),0 0 0 70px rgba(255,255,255,.04);}
 .detail-hero h1 {position:relative;z-index:1;margin:10px 0 0;max-width:790px;font:600 clamp(39px,6vw,69px)/1 var(--app-font-serif);letter-spacing:-.055em;}

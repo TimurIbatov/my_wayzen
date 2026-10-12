@@ -1,0 +1,902 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: WayZen Uzbekistan travel catalog, itineraries, and accounts
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: places
+    description: Public WayZen place catalog and moderation
+  - name: travelers
+    description: Traveler profiles, favorites, and saved trips
+  - name: ai
+    description: Gemini chat and personalized itineraries
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /places:
+    get:
+      operationId: listPlaces
+      tags: [places]
+      summary: Search and filter the public place catalog
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: region
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Places visible in the public catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Place" }
+  /places/{slug}:
+    get:
+      operationId: getPlace
+      tags: [places]
+      summary: Get a place by its slug
+      parameters:
+        - $ref: "#/components/parameters/PlaceSlug"
+      responses:
+        "200":
+          description: Place details
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Place" }
+        "404":
+          description: Place not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /overview:
+    get:
+      operationId: getOverview
+      tags: [places]
+      summary: Get catalog counts and featured places
+      responses:
+        "200":
+          description: Catalog overview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Overview" }
+  /me/profile:
+    get:
+      operationId: getProfile
+      tags: [travelers]
+      summary: Get the signed-in traveler's profile and plan status
+      responses:
+        "200":
+          description: Profile and today's AI route allowance
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Profile" }
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    put:
+      operationId: updateProfile
+      tags: [travelers]
+      summary: Save travel preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProfileInput" }
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Profile" }
+  /me/favorites:
+    get:
+      operationId: listFavorites
+      tags: [travelers]
+      summary: List saved places
+      responses:
+        "200":
+          description: Saved places
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Favorite" }
+    post:
+      operationId: addFavorite
+      tags: [travelers]
+      summary: Save a place to the traveler's account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FavoriteInput" }
+      responses:
+        "201":
+          description: Saved place
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Favorite" }
+  /me/favorites/{slug}:
+    delete:
+      operationId: removeFavorite
+      tags: [travelers]
+      summary: Remove a saved place
+      parameters:
+        - $ref: "#/components/parameters/PlaceSlug"
+      responses:
+        "204": { description: Favorite removed }
+  /me/trips:
+    get:
+      operationId: listTrips
+      tags: [travelers]
+      summary: List the traveler's saved trips
+      responses:
+        "200":
+          description: Saved trips
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Trip" }
+    post:
+      operationId: createTrip
+      tags: [travelers]
+      summary: Save a trip itinerary
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TripInput" }
+      responses:
+        "201":
+          description: Created trip
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Trip" }
+  /me/trips/{id}:
+    get:
+      operationId: getTrip
+      tags: [travelers]
+      summary: Get one saved trip
+      parameters:
+        - $ref: "#/components/parameters/TripId"
+      responses:
+        "200":
+          description: Saved trip
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Trip" }
+    patch:
+      operationId: updateTrip
+      tags: [travelers]
+      summary: Edit a saved trip
+      parameters:
+        - $ref: "#/components/parameters/TripId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TripUpdate" }
+      responses:
+        "200":
+          description: Updated trip
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Trip" }
+    delete:
+      operationId: deleteTrip
+      tags: [travelers]
+      summary: Delete a saved trip
+      parameters:
+        - $ref: "#/components/parameters/TripId"
+      responses:
+        "204": { description: Trip deleted }
+  /ai/routes:
+    post:
+      operationId: generateAiRoute
+      tags: [ai]
+      summary: Generate a personalized itinerary with the daily free-plan limit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RouteGenerationInput" }
+      responses:
+        "200":
+          description: Suggested itinerary with estimated travel times
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GeneratedRoute" }
+        "429":
+          description: Daily route limit reached
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /wayzen/chat:
+    post:
+      operationId: chatWithWayZen
+      tags: [ai]
+      summary: Stream a bounded chat response from the WayZen travel guide
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WayZenChatInput" }
+      responses:
+        "200":
+          description: Server-sent events with response chunks
+          content:
+            text/event-stream: {}
+        "429":
+          description: Daily free chat limit reached
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /gemini/conversations:
+    get:
+      operationId: listGeminiConversations
+      tags: [ai]
+      summary: List the signed-in traveler's saved chats
+      responses:
+        "200":
+          description: Saved conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Conversation" }
+    post:
+      operationId: createGeminiConversation
+      tags: [ai]
+      summary: Start a saved chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConversationInput" }
+      responses:
+        "201":
+          description: Created conversation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Conversation" }
+  /gemini/conversations/{id}:
+    get:
+      operationId: getGeminiConversation
+      tags: [ai]
+      summary: Get a saved chat and its messages
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      responses:
+        "200":
+          description: Conversation and messages
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConversationWithMessages" }
+    delete:
+      operationId: deleteGeminiConversation
+      tags: [ai]
+      summary: Delete a saved chat
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      responses:
+        "204": { description: Conversation deleted }
+  /gemini/conversations/{id}/messages:
+    post:
+      operationId: sendGeminiMessage
+      tags: [ai]
+      summary: Stream a chat response and save both messages
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConversationMessageInput" }
+      responses:
+        "200":
+          description: Server-sent events with response chunks
+          content:
+            text/event-stream: {}
+  /admin/places:
+    get:
+      operationId: listAdminPlaces
+      tags: [places]
+      summary: List all places, including drafts, for moderators
+      responses:
+        "200":
+          description: Moderation catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Place" }
+    post:
+      operationId: createPlace
+      tags: [places]
+      summary: Create a place record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlaceInput" }
+      responses:
+        "201":
+          description: Created place
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Place" }
+  /admin/places/{slug}:
+    patch:
+      operationId: updatePlace
+      tags: [places]
+      summary: Edit or moderate a place record
+      parameters:
+        - $ref: "#/components/parameters/PlaceSlug"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlaceUpdate" }
+      responses:
+        "200":
+          description: Updated place
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Place" }
+    delete:
+      operationId: deletePlace
+      tags: [places]
+      summary: Delete a place record
+      parameters:
+        - $ref: "#/components/parameters/PlaceSlug"
+      responses:
+        "204": { description: Place deleted }
+  /me/trip-pass/demo:
+    post:
+      operationId: activateDemoTripPass
+      tags: [travelers]
+      summary: Activate a no-payment demo pass in development
+      description: Available only when NODE_ENV=development. Returns 404 in other environments.
+      responses:
+        "200":
+          description: Updated plan
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Profile" }
+        "404":
+          description: Not available outside development
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /me/trip-pass/checkout:
+    post:
+      operationId: createTripPassCheckout
+      tags: [travelers]
+      summary: Create a Stripe Checkout session for Trip Pass
+      description: Requires STRIPE_SECRET_KEY and STRIPE_TRIP_PASS_PRICE_ID. No payment secrets are returned to the client.
+      responses:
+        "200":
+          description: Checkout session URL
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TripPassCheckout" }
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: Stripe is not configured
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /billing/stripe/webhook:
+    post:
+      operationId: handleStripeWebhook
+      tags: [travelers]
+      summary: Stripe webhook for Trip Pass purchases
+      description: Verifies STRIPE_WEBHOOK_SECRET. On checkout.session.completed with product trip_pass, sets plan=trip_pass and expiry.
+      responses:
+        "200":
+          description: Event acknowledged
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StripeWebhookAck" }
+        "400":
+          description: Invalid signature or payload
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [places]
+      summary: Request a signed upload URL for an archive photo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UploadUrlRequest" }
+      responses:
+        "200":
+          description: Signed upload URL and object path
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UploadUrlResponse" }
+        "400":
+          description: Invalid image upload metadata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Moderator access required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /storage/public-objects/{filePath}:
+    get:
+      operationId: getPublicObject
+      tags: [places]
+      summary: Serve a public object from App Storage
+      parameters:
+        - name: filePath
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Public object content
+          content:
+            "*/*":
+              schema: { type: string, format: binary }
+        "404":
+          description: Object not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /storage/objects/{objectPath}:
+    get:
+      operationId: getStorageObject
+      tags: [places]
+      summary: Serve an uploaded archive photo
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Object content
+          content:
+            "*/*":
+              schema: { type: string, format: binary }
+        "404":
+          description: Object not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+components:
+  parameters:
+    PlaceSlug:
+      name: slug
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    TripId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    ConversationId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+      required: [error]
+    UploadUrlRequest:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        size: { type: integer, minimum: 1, maximum: 10485760 }
+        contentType:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+      required: [name, size, contentType]
+    UploadUrlResponse:
+      type: object
+      properties:
+        uploadURL: { type: string, format: uri }
+        objectPath: { type: string }
+        metadata: { $ref: "#/components/schemas/UploadUrlRequest" }
+      required: [uploadURL, objectPath, metadata]
+    Place:
+      type: object
+      properties:
+        id: { type: integer }
+        slug: { type: string }
+        nameRu: { type: string }
+        nameEn: { type: string }
+        nameUz: { type: ["string", "null"] }
+        latitude: { type: number }
+        longitude: { type: number }
+        region: { type: string }
+        category: { type: string }
+        kind: { type: string }
+        summaryRu: { type: string }
+        summaryEn: { type: string }
+        storyRu: { type: string }
+        storyEn: { type: string }
+        practicalNotesRu: { type: string }
+        practicalNotesEn: { type: string }
+        imageUrls:
+          type: array
+          items: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        seasonality:
+          type: array
+          items: { type: string }
+        accessDifficulty: { type: string }
+        verificationStatus:
+          type: string
+          enum: [draft, preliminary, verified, stale]
+        source: { type: string }
+        updatedAt: { type: string, format: date-time }
+      required:
+        - id
+        - slug
+        - nameRu
+        - nameEn
+        - nameUz
+        - latitude
+        - longitude
+        - region
+        - category
+        - kind
+        - summaryRu
+        - summaryEn
+        - storyRu
+        - storyEn
+        - practicalNotesRu
+        - practicalNotesEn
+        - imageUrls
+        - tags
+        - seasonality
+        - accessDifficulty
+        - verificationStatus
+        - source
+        - updatedAt
+    PlaceInput:
+      type: object
+      properties:
+        slug: { type: string, minLength: 2 }
+        nameRu: { type: string, minLength: 1 }
+        nameEn: { type: string, minLength: 1 }
+        nameUz: { type: ["string", "null"] }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        region: { type: string, minLength: 1 }
+        category: { type: string, minLength: 1 }
+        kind: { type: string, minLength: 1 }
+        summaryRu: { type: string }
+        summaryEn: { type: string }
+        storyRu: { type: string }
+        storyEn: { type: string }
+        practicalNotesRu: { type: string }
+        practicalNotesEn: { type: string }
+        imageUrls:
+          type: array
+          items: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        seasonality:
+          type: array
+          items: { type: string }
+        accessDifficulty: { type: string }
+        verificationStatus:
+          type: string
+          enum: [draft, preliminary, verified, stale]
+        source: { type: string }
+      required:
+        - slug
+        - nameRu
+        - nameEn
+        - latitude
+        - longitude
+        - region
+        - category
+        - kind
+        - summaryRu
+        - summaryEn
+        - storyRu
+        - storyEn
+        - practicalNotesRu
+        - practicalNotesEn
+        - imageUrls
+        - tags
+        - seasonality
+        - accessDifficulty
+        - verificationStatus
+        - source
+    PlaceUpdate:
+      type: object
+      properties:
+        nameRu: { type: string, minLength: 1 }
+        nameEn: { type: string, minLength: 1 }
+        nameUz: { type: ["string", "null"] }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        region: { type: string }
+        category: { type: string }
+        kind: { type: string }
+        summaryRu: { type: string }
+        summaryEn: { type: string }
+        storyRu: { type: string }
+        storyEn: { type: string }
+        practicalNotesRu: { type: string }
+        practicalNotesEn: { type: string }
+        imageUrls:
+          type: array
+          items: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        seasonality:
+          type: array
+          items: { type: string }
+        accessDifficulty: { type: string }
+        verificationStatus:
+          type: string
+          enum: [draft, preliminary, verified, stale]
+        source: { type: string }
+    Overview:
+      type: object
+      properties:
+        placesTotal: { type: integer }
+        preliminaryCount: { type: integer }
+        categories:
+          type: array
+          items: { type: string }
+        regions:
+          type: array
+          items: { type: string }
+        featuredPlaces:
+          type: array
+          items: { $ref: "#/components/schemas/Place" }
+      required: [placesTotal, preliminaryCount, categories, regions, featuredPlaces]
+    Profile:
+      type: object
+      properties:
+        interests:
+          type: array
+          items: { type: string }
+        pace: { type: string, enum: [slow, balanced, packed] }
+        budget: { type: string, enum: [budget, moderate, comfort] }
+        travelStyle: { type: string }
+        plan: { type: string, enum: [free, trip_pass] }
+        tripPassExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: ISO expiry for an active Trip Pass; null means no expiry recorded
+        aiRoutesUsedToday: { type: integer }
+        aiRoutesLimit: { type: integer }
+        aiChatUsedToday: { type: integer }
+        aiChatLimit: { type: integer }
+        isAdmin: { type: boolean }
+        offlineMapsEnabled:
+          type: boolean
+          description: Server feature flag for the offline-maps stub (never implies download works)
+      required:
+        - interests
+        - pace
+        - budget
+        - travelStyle
+        - plan
+        - tripPassExpiresAt
+        - aiRoutesUsedToday
+        - aiRoutesLimit
+        - aiChatUsedToday
+        - aiChatLimit
+        - isAdmin
+        - offlineMapsEnabled
+    TripPassCheckout:
+      type: object
+      properties:
+        url: { type: string, format: uri }
+      required: [url]
+    StripeWebhookAck:
+      type: object
+      properties:
+        received: { type: boolean }
+      required: [received]
+    ProfileInput:
+      type: object
+      properties:
+        interests:
+          type: array
+          items: { type: string }
+        pace: { type: string, enum: [slow, balanced, packed] }
+        budget: { type: string, enum: [budget, moderate, comfort] }
+        travelStyle: { type: string, maxLength: 240 }
+      required: [interests, pace, budget, travelStyle]
+    Favorite:
+      type: object
+      properties:
+        placeSlug: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [placeSlug, createdAt]
+    FavoriteInput:
+      type: object
+      properties:
+        placeSlug: { type: string, minLength: 1 }
+      required: [placeSlug]
+    TripStop:
+      type: object
+      properties:
+        placeSlug: { type: string }
+        order: { type: integer }
+        estimatedTravelMinutes: { type: integer }
+        suggestedVisitMinutes: { type: integer }
+        note: { type: string }
+      required: [placeSlug, order, estimatedTravelMinutes, suggestedVisitMinutes, note]
+    TripDay:
+      type: object
+      properties:
+        day: { type: integer }
+        theme: { type: string }
+        stops:
+          type: array
+          items: { $ref: "#/components/schemas/TripStop" }
+      required: [day, theme, stops]
+    Trip:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        notes: { type: string }
+        days:
+          type: array
+          items: { $ref: "#/components/schemas/TripDay" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, title, notes, days, createdAt, updatedAt]
+    TripInput:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        notes: { type: string, maxLength: 2000 }
+        days:
+          type: array
+          items: { $ref: "#/components/schemas/TripDay" }
+      required: [title, notes, days]
+    TripUpdate:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        notes: { type: string, maxLength: 2000 }
+        days:
+          type: array
+          items: { $ref: "#/components/schemas/TripDay" }
+    RouteGenerationInput:
+      type: object
+      properties:
+        days: { type: integer, minimum: 1, maximum: 7 }
+        interests:
+          type: array
+          items: { type: string }
+        region: { type: string }
+        pace: { type: string, enum: [slow, balanced, packed] }
+        budget: { type: string, enum: [budget, moderate, comfort] }
+        anonymousId: { type: string, minLength: 12, maxLength: 80 }
+      required: [days, interests, pace, budget]
+    GeneratedRoute:
+      type: object
+      properties:
+        title: { type: string }
+        days:
+          type: array
+          items: { $ref: "#/components/schemas/TripDay" }
+        approximateTotalMinutes: { type: integer }
+        remainingRoutesToday: { type: integer }
+        disclaimer: { type: string }
+      required: [title, days, approximateTotalMinutes, remainingRoutesToday, disclaimer]
+    WayZenChatMessage:
+      type: object
+      properties:
+        role: { type: string, enum: [user, assistant] }
+        content: { type: string, minLength: 1, maxLength: 2000 }
+      required: [role, content]
+    WayZenChatInput:
+      type: object
+      properties:
+        messages:
+          type: array
+          minItems: 1
+          maxItems: 12
+          items: { $ref: "#/components/schemas/WayZenChatMessage" }
+      required: [messages]
+    Conversation:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, title, createdAt, updatedAt]
+    ConversationMessage:
+      type: object
+      properties:
+        id: { type: integer }
+        conversationId: { type: integer }
+        role: { type: string, enum: [user, assistant] }
+        content: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, conversationId, role, content, createdAt]
+    ConversationWithMessages:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        messages:
+          type: array
+          items: { $ref: "#/components/schemas/ConversationMessage" }
+      required: [id, title, createdAt, updatedAt, messages]
+    ConversationInput:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+      required: [title]
+    ConversationMessageInput:
+      type: object
+      properties:
+        content: { type: string, minLength: 1, maxLength: 2000 }
+      required: [content]
+

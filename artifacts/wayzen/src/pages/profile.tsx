@@ -84,29 +84,12 @@ export function ProfilePage() {
       <aside className="status-card" data-testid="profile-plan-status">
         <span className="eyebrow">План аккаунта</span>
         <p><strong data-testid="text-plan-name">{isTripPass ? 'Trip Pass' : 'Free'}</strong></p>
-        <p data-testid="text-plan-summary">
-          {isTripPass
-            ? `Активен${expiryLabel ? ` до ${expiryLabel}` : ''}. Дневные лимиты AI сняты.`
-            : 'Бесплатный план: 1 AI-маршрут и 10 сообщений чата за день по Самарканду.'}
-        </p>
-        <p data-testid="text-route-quota-profile">
-          AI-маршруты сегодня:{' '}
-          {data.aiRoutesLimit < 0
-            ? 'без дневного лимита'
-            : `осталось ${Math.max(data.aiRoutesLimit - data.aiRoutesUsedToday, 0)} из ${data.aiRoutesLimit} (использовано ${data.aiRoutesUsedToday})`}
-          .
-        </p>
-        <p data-testid="text-chat-quota-profile">
-          Сообщения AI-чата сегодня:{' '}
-          {data.aiChatLimit < 0
-            ? 'без дневного лимита'
-            : `осталось ${Math.max(data.aiChatLimit - data.aiChatUsedToday, 0)} из ${data.aiChatLimit} (использовано ${data.aiChatUsedToday})`}
-          .
-        </p>
+        {isTripPass && expiryLabel && <p data-testid="text-plan-summary">Активен до {expiryLabel}. Дневные лимиты AI сняты.</p>}
+        <p data-testid="text-route-quota-profile">AI-маршруты сегодня: {data.aiRoutesLimit < 0 ? 'без дневного лимита' : `${data.aiRoutesUsedToday} из ${data.aiRoutesLimit}${data.aiRoutesLimit >= 0 ? ` · осталось ${Math.max(data.aiRoutesLimit - data.aiRoutesUsedToday, 0)}` : ''}`}.</p>
+        <p data-testid="text-chat-quota-profile">Сообщения AI-чата сегодня: {data.aiChatLimit < 0 ? 'без дневного лимита' : `${data.aiChatUsedToday} из ${data.aiChatLimit}${data.aiChatLimit >= 0 ? ` · осталось ${Math.max(data.aiChatLimit - data.aiChatUsedToday, 0)}` : ''}`}.</p>
         <p>Роль модератора: {data.isAdmin ? 'есть' : 'нет'}</p>
         {checkoutStatus === 'success' && <p role="status" data-testid="status-trip-pass-success">Оплата прошла. Если план ещё Free — обновите страницу после webhook Stripe.</p>}
         {checkoutStatus === 'cancelled' && <p role="status" data-testid="status-trip-pass-cancelled">Оплата отменена. План не изменён.</p>}
-
         {!isTripPass && !import.meta.env.DEV && (
           <div style={{ marginTop: 18, borderTop: '1px solid rgba(48,83,68,.2)', paddingTop: 15 }}>
             <button className="btn btn-warm" type="button" onClick={() => void startCheckout()} disabled={checkout.isPending} data-testid="button-upgrade-trip-pass">
@@ -116,25 +99,18 @@ export function ProfilePage() {
             {checkoutError && <p role="alert" data-testid="status-checkout-error">{checkoutError}</p>}
           </div>
         )}
-
         {isTripPass && (
           <div style={{ marginTop: 14 }}>
             {data.offlineMapsEnabled ? (
               <>
                 <button className="btn btn-quiet" type="button" onClick={() => setOfflinePreviewOpen(open => !open)} aria-expanded={offlinePreviewOpen} data-testid="button-offline-preview">Офлайн-карты</button>
-                {offlinePreviewOpen && (
-                  <div role="status" data-testid="offline-map-stub" style={{ marginTop: 10, padding: 14, borderRadius: 12, background: 'rgba(255,255,255,.52)' }}>
-                    <strong>Заглушка функции</strong>
-                    <p style={{ marginBottom: 0 }}>Пакеты карт и офлайн-навигация не реализованы. Загрузка не запускается — это только предпросмотр интерфейса (`OFFLINE_MAPS_ENABLED`).</p>
-                  </div>
-                )}
+                {offlinePreviewOpen && <div role="status" data-testid="offline-map-stub" style={{ marginTop: 10, padding: 14, borderRadius: 12, background: 'rgba(255,255,255,.52)' }}><strong>Предпросмотр функции</strong><p style={{ marginBottom: 0 }}>Здесь появятся пакеты карт. Загрузка карт и офлайн-навигация пока не реализованы.</p></div>}
               </>
             ) : (
               <p data-testid="text-offline-maps-disabled" style={{ marginBottom: 0 }}>Офлайн-карты отключены feature-флагом. Скачивание недоступно.</p>
             )}
           </div>
         )}
-
         {import.meta.env.DEV && (
           <div style={{ marginTop: 18, borderTop: '1px solid rgba(48,83,68,.2)', paddingTop: 15 }}>
             <button className="btn btn-warm" onClick={() => pass.mutate()} disabled={pass.isPending} data-testid="button-test-trip-pass">{pass.isPending ? 'Тестируем…' : 'Тестовый Trip Pass'}</button>

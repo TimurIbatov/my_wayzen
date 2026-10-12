@@ -222,7 +222,7 @@ export function MapPage() {
           {!places.isLoading && !places.isError && <PlaceClusters places={markerPlaces} selectedSlug={selectedSlug} onSelect={setSelectedSlug} />}
           <TripRouteLayer trip={activeTrip} places={routePlaces} />
         </MapContainer>
-        <div className="map-disclaimer" data-testid="text-map-caveat">Архивные координаты — только ориентир. Проверяйте доступ и условия самостоятельно; WayZen не сообщает точное время в пути. Кластеры объединяют близкие точки; линия поездки не является маршрутом.</div>
+        <div className="map-disclaimer" data-testid="text-map-caveat">Архивные координаты — только ориентир. Проверяйте доступ и условия самостоятельно; WayZen не сообщает точное время в пути.</div>
       </section>
     </div><Footer />
   </main>;

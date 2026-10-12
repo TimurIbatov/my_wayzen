@@ -65,6 +65,7 @@ export function AdminPlaces() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const form = useForm<AdminForm>({ defaultValues: adminBlank });
+  const previewUrls = form.watch('imageUrls').split('\n').map(item => item.trim()).filter(Boolean);
   useEffect(() => { form.reset(adminValues(editing ?? undefined)); }, [editing, creating, form]);
   const uploadPhotos = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -130,9 +131,12 @@ export function AdminPlaces() {
         <div className="field-label" style={{ gridColumn: '1 / -1' }}>
           <label htmlFor="admin-photo-upload">Загрузить фото</label>
           <input id="admin-photo-upload" className="field" type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={uploading} onChange={event => { void uploadPhotos(event.target.files); event.target.value = ''; }} data-testid="input-admin-photo-upload" />
-          <small>Фото уменьшается до 1600 px и WebP, затем загружается прямо в App Storage. JPG, PNG или WebP; до 10 МБ после сжатия.</small>
+          <small>Фото уменьшается до 1600 px и WebP, затем загружается через <code>/api/storage/uploads/request-url</code> в App Storage. URL добавляется в поле «Ссылки на фото». JPG, PNG или WebP; до 10 МБ после сжатия.</small>
           {uploading && <p role="status">Оптимизируем и загружаем фото…</p>}
           {uploadError && <p role="alert" data-testid="status-admin-photo-error">{uploadError}</p>}
+          {previewUrls.length > 0 && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginTop: 10 }} data-testid="admin-photo-preview">
+            {previewUrls.map((url, index) => <img key={`${url}-${index}`} src={url} alt={`Превью ${index + 1}`} loading="lazy" style={{ width: '100%', height: 96, objectFit: 'cover', borderRadius: 10, background: '#e6e9e2' }} onError={event => { event.currentTarget.style.display = 'none'; }} />)}
+          </div>}
         </div>
       </div><button type="submit" disabled={busy || uploading} className="btn btn-primary" data-testid="button-save-place">{busy ? 'Сохраняем…' : uploading ? 'Загружаем фото…' : 'Сохранить запись'}</button></form></Form>
     </section>}

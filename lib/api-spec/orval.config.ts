@@ -30,6 +30,11 @@ export default defineConfig({
       clean: true,
       prettier: true,
       override: {
+        // Orval resolves react-query from api-spec/package.json under npm
+        // workspaces; pin v5 to match @workspace/api-client-react.
+        query: {
+          version: 5,
+        },
         fetch: {
           includeHttpResponseReturnType: false,
         },

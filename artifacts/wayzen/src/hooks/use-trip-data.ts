@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAuth } from '@clerk/react';
+import { useAuth } from '@/lib/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import { getListTripsQueryKey, useDeleteTrip, useListTrips } from '@workspace/api-client-react';
 import type { Trip } from '@workspace/api-client-react';

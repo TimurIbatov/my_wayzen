@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Bot, MessageCircle, Plus, RefreshCw, Send, Trash2 } from 'lucide-react';
-import { useAuth } from '@clerk/react';
+import { useAuth } from '@/lib/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getGetGeminiConversationQueryKey, getGetProfileQueryKey,

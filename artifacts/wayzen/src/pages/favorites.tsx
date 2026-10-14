@@ -1,5 +1,5 @@
 import { Heart } from 'lucide-react';
-import { useAuth } from '@clerk/react';
+import { useAuth } from '@/lib/auth';
 import { getListPlacesQueryKey, useListPlaces } from '@workspace/api-client-react';
 import { Link } from 'wouter';
 import { ArchiveNotice } from '@/components/ArchiveNotice';

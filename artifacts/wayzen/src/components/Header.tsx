@@ -1,5 +1,5 @@
 import { ArrowDown, Compass, Heart, Map as MapIcon, MapPin, MessageCircle, Sparkles } from 'lucide-react';
-import { useAuth, useClerk } from '@clerk/react';
+import { useAuth, useClerk } from '@/lib/auth';
 import { Link, useLocation } from 'wouter';
 import { Brand } from '@/components/Brand';
 import { basePath } from '@/lib/constants';

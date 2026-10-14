@@ -72,10 +72,24 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    // Local npm: frontend (5173) and API (5055) are separate processes.
+    // Proxy /api so the SPA can call relative /api/* without CORS/base URL setup.
+    proxy: {
+      '/api': {
+        target: process.env.API_PROXY_TARGET || 'http://127.0.0.1:5055',
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     port,
     host: '0.0.0.0',
     allowedHosts: true,
+    proxy: {
+      '/api': {
+        target: process.env.API_PROXY_TARGET || 'http://127.0.0.1:5055',
+        changeOrigin: true,
+      },
+    },
   },
 });

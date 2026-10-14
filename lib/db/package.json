@@ -8,9 +8,9 @@
     "./schema": "./src/schema/index.ts"
   },
   "scripts": {
-    "seed": "node ./src/seed.mjs",
-    "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
+    "seed": "node --env-file-if-exists=../../.env ./src/seed.mjs",
+    "push": "node --env-file-if-exists=../../.env ../../node_modules/drizzle-kit/bin.cjs push --config ./drizzle.config.ts",
+    "push-force": "node --env-file-if-exists=../../.env ../../node_modules/drizzle-kit/bin.cjs push --force --config ./drizzle.config.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",

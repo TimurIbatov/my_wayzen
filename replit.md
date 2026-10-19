@@ -18,11 +18,12 @@ npm run db:push
 npm run seed
 # equivalent: npm run seed -w @workspace/db
 
-# API (requires PORT + DATABASE_URL; loads root `.env` if present)
-PORT=5055 npm run dev -w @workspace/api-server
-
-# Frontend (requires PORT + BASE_PATH). Vite proxies `/api` → API (default :5055).
-PORT=5173 BASE_PATH=/ npm run dev -w @workspace/wayzen
+# Dev (two terminals). Defaults: API :5055, web :5173 BASE_PATH=/
+npm run dev:api
+npm run dev:web
+# equivalents:
+# PORT=5055 npm run dev -w @workspace/api-server
+# PORT=5173 BASE_PATH=/ npm run dev -w @workspace/wayzen
 
 # Quality gates (product: api-server + wayzen; mockup-sandbox excluded)
 npm run typecheck

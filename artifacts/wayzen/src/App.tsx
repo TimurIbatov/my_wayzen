@@ -1,9 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { ClerkProvider, useAuth, useClerk } from '@clerk/react';
-import { publishableKeyFromHost } from '@/lib/clerk';
-import { shadcn } from '@clerk/themes';
 import { Route, Switch, Router as WouterRouter, useLocation, Redirect } from 'wouter';
+import { setAuthTokenGetter } from '@workspace/api-client-react';
+import { AuthShell, useAuth, useClerk } from '@/lib/auth';
 import { AppSidebar } from '@/components/AppSidebar';
 import { useFavoritesState } from '@/hooks/use-favorites';
 import { LocaleProvider, useI18n } from '@/lib/i18n';
@@ -26,9 +25,6 @@ import { ProtectedPortalRoute, SignInPage, SignUpPage } from '@/pages/auth';
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false } },
 });
-const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
-const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
-if (!clerkPubKey) throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY');
 const stripBase = (path: string) => basePath && path.startsWith(basePath) ? path.slice(basePath.length) || '/' : path;
 
 function ClerkCacheInvalidator() {
@@ -36,6 +32,23 @@ function ClerkCacheInvalidator() {
   const client = useQueryClient();
   const lastUser = useRef<string | null | undefined>(undefined);
   useEffect(() => addListener(({ user }) => { const id = user?.id ?? null; if (lastUser.current !== undefined && id !== lastUser.current) client.clear(); lastUser.current = id; }), [addListener, client]);
+  return null;
+}
+
+/** Attach Clerk session JWT to API client so requireUserId routes work from the SPA. */
+function ClerkAuthTokenBridge() {
+  const { getToken, isLoaded } = useAuth();
+  useEffect(() => {
+    if (!isLoaded) return;
+    setAuthTokenGetter(async () => {
+      try {
+        return (await getToken()) ?? null;
+      } catch {
+        return null;
+      }
+    });
+    return () => setAuthTokenGetter(null);
+  }, [getToken, isLoaded]);
   return null;
 }
 
@@ -76,67 +89,16 @@ function SiteRouter() {
 function ClerkRoutes() {
   const [, setLocation] = useLocation();
   return (
-    <ClerkProvider
-      publishableKey={clerkPubKey}
-      proxyUrl={clerkProxyUrl}
-      appearance={{
-        theme: shadcn,
-        cssLayerName: 'clerk',
-        options: { logoPlacement: 'inside', logoLinkUrl: basePath || '/', logoImageUrl: `${window.location.origin}${basePath}/logo.svg` },
-        variables: {
-          colorPrimary: '#2dd4bf',
-          colorForeground: '#e8eef2',
-          colorMutedForeground: '#9aa8b2',
-          colorDanger: '#f07167',
-          colorBackground: '#121820',
-          colorInput: '#1a222c',
-          colorInputForeground: '#e8eef2',
-          colorNeutral: '#2a3440',
-          fontFamily: 'Manrope, sans-serif',
-          borderRadius: '0.9rem',
-        },
-        elements: {
-          rootBox: 'w-full flex justify-center',
-          cardBox: 'bg-[#121820] rounded-2xl w-[440px] max-w-full overflow-hidden shadow-none border border-[#2a3440]',
-          card: '!shadow-none !border-0 !bg-transparent !rounded-none',
-          footer: '!shadow-none !border-0 !bg-transparent !rounded-none',
-          headerTitle: 'text-[#e8eef2] font-semibold',
-          headerSubtitle: 'text-[#9aa8b2]',
-          socialButtonsBlockButtonText: 'text-[#e8eef2]',
-          formFieldLabel: 'text-[#e8eef2]',
-          footerActionLink: 'text-[#2dd4bf]',
-          footerActionText: 'text-[#9aa8b2]',
-          dividerText: 'text-[#9aa8b2]',
-          identityPreviewEditButton: 'text-[#2dd4bf]',
-          formFieldSuccessText: 'text-[#2dd4bf]',
-          alertText: 'text-[#f07167]',
-          logoBox: 'rounded-xl',
-          logoImage: 'object-contain',
-          socialButtonsBlockButton: 'border-[#2a3440] bg-[#1a222c]',
-          formButtonPrimary: 'bg-[#2dd4bf] text-[#0b1218]',
-          formFieldInput: 'border-[#2a3440] bg-[#1a222c] text-[#e8eef2]',
-          footerAction: 'text-[#9aa8b2]',
-          dividerLine: 'bg-[#2a3440]',
-          alert: 'bg-[#2a1d22]',
-          otpCodeFieldInput: 'border-[#2a3440] bg-[#1a222c] text-[#e8eef2]',
-          formFieldRow: 'text-[#e8eef2]',
-          main: 'text-[#e8eef2]',
-        },
-      }}
-      signInUrl={`${basePath}/sign-in`}
-      signUpUrl={`${basePath}/sign-up`}
-      localization={{
-        signIn: { start: { title: 'С возвращением', subtitle: 'Продолжите планировать в своём темпе' } },
-        signUp: { start: { title: 'Создайте аккаунт', subtitle: 'Сохраняйте места и собственные поездки' } },
-      }}
+    <AuthShell
       routerPush={(to: string) => setLocation(stripBase(to))}
       routerReplace={(to: string) => setLocation(stripBase(to), { replace: true })}
     >
       <LocaleProvider>
         <ClerkCacheInvalidator />
+        <ClerkAuthTokenBridge />
         <SiteRouter />
       </LocaleProvider>
-    </ClerkProvider>
+    </AuthShell>
   );
 }
 

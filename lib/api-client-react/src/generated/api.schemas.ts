@@ -212,7 +212,10 @@ export interface Profile {
   budget: ProfileBudget;
   travelStyle: string;
   plan: ProfilePlan;
-  /** ISO expiry for an active Trip Pass; null means no expiry recorded */
+  /**
+     * ISO expiry for an active Trip Pass; null means no expiry recorded
+     * @nullable
+     */
   tripPassExpiresAt: string | null;
   aiRoutesUsedToday: number;
   aiRoutesLimit: number;

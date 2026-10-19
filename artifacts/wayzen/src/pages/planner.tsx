@@ -1,5 +1,5 @@
 import { ArrowRight, Bookmark, Compass, LoaderCircle, Sparkles } from 'lucide-react';
-import { useAuth } from '@clerk/react';
+import { useAuth } from '@/lib/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getGetProfileQueryKey, getListPlacesQueryKey,

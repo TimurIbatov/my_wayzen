@@ -5,33 +5,54 @@ Personalized AI travel guide for Uzbekistan’s lesser-known places. Travelers b
 ## Run & Operate
 
 ```bash
-pnpm install
+npm install
 
 # Copy placeholders; set real secrets via Cursor/environment secrets (never paste into chat)
 cp .env.example .env
 
 # Schema (dev) — requires DATABASE_URL
-pnpm db:push
-# equivalent: pnpm --filter @workspace/db run push
+npm run db:push
+# equivalent: npm run push -w @workspace/db
 
 # Seed archive places (requires DATABASE_URL)
-pnpm seed
-# equivalent: pnpm --filter @workspace/db run seed
+npm run seed
+# equivalent: npm run seed -w @workspace/db
 
-# API (requires PORT + DATABASE_URL)
-PORT=5055 pnpm --filter @workspace/api-server run dev
+# Dev (two terminals). Defaults: API :5055, web :5173 BASE_PATH=/
+npm run dev:api
+npm run dev:web
+# equivalents:
+# PORT=5055 npm run dev -w @workspace/api-server
+# PORT=5173 BASE_PATH=/ npm run dev -w @workspace/wayzen
 
-# Frontend (requires PORT + BASE_PATH)
-PORT=5173 BASE_PATH=/ pnpm --filter @workspace/wayzen run dev
-
-# Quality gates
-pnpm run typecheck
-pnpm run build
-# Frontend build alone also needs PORT + BASE_PATH:
-PORT=5173 BASE_PATH=/ pnpm --filter @workspace/wayzen run build
+# Quality gates (product: api-server + wayzen; mockup-sandbox excluded)
+npm run typecheck
+npm run build
+# Frontend alone (defaults PORT=5173 BASE_PATH=/ via build:wayzen):
+npm run build:wayzen
+# Or explicitly:
+PORT=5173 BASE_PATH=/ npm run build -w @workspace/wayzen
 
 # After OpenAPI changes
-pnpm --filter @workspace/api-spec run codegen
+npm run codegen
+# equivalent: npm run codegen -w @workspace/api-spec
+```
+
+### Tailwind oxide / npm optional-deps
+
+Vite/wayzen scripts run `scripts/ensure-tailwind-oxide.mjs` (also on `postinstall`): installs the platform `@tailwindcss/oxide-*` package if npm dropped it, copies the `.node` into the oxide package, and sets `NAPI_RS_NATIVE_LIBRARY_PATH` to an ASCII cache under `~/.cache/wayzen-oxide/` (helps non-ASCII paths like `Рабочий стол`).
+
+If it still fails:
+
+```bash
+# Recommended: ASCII checkout path
+mkdir -p ~/projects && cd ~/projects
+git clone <your-fork-url> my_wayzen && cd my_wayzen
+git checkout cursor/npm-workspaces-69f8
+rm -rf node_modules package-lock.json
+npm install
+PORT=5173 BASE_PATH=/ npm run dev -w @workspace/wayzen
+# or: npm run dev:web
 ```
 
 ### Environment variables
@@ -81,7 +102,7 @@ PUBLIC_APP_URL=http://localhost:5173
 
 ## Stack
 
-- pnpm workspaces, Node.js, TypeScript 5.9
+- npm workspaces, Node.js, TypeScript 5.9
 - Frontend: React 19 + Vite + wouter + TanStack Query + Leaflet (+ markercluster) + Clerk
 - API: Express 5 (`artifacts/api-server`)
 - DB: PostgreSQL + Drizzle ORM (`lib/db`)
@@ -99,7 +120,7 @@ PUBLIC_APP_URL=http://localhost:5173
 | API entry / routes | `artifacts/api-server/src/app.ts`, `routes/*` |
 | AI + Trip Pass helpers | `artifacts/api-server/src/lib/{wayzenAi,tripPass,stripe}.ts` |
 | DB schema | `lib/db/src/schema/{places,travelers,ai}.ts` |
-| Seed | `lib/db/src/seed.mjs` (`pnpm seed`) |
+| Seed | `lib/db/src/seed.mjs` (`npm run seed`) |
 | OpenAPI source of truth | `lib/api-spec/openapi.yaml` |
 | Theme / CSS | `artifacts/wayzen/src/index.css` |
 
@@ -132,9 +153,9 @@ PUBLIC_APP_URL=http://localhost:5173
 
 ## Gotchas
 
-- Always set `DATABASE_URL` before `pnpm seed` or `pnpm --filter @workspace/db run push`.
+- Always set `DATABASE_URL` before `npm run seed` or `npm run db:push`.
 - Vite **requires** `PORT` and `BASE_PATH` even for production builds.
-- After editing `lib/api-spec/openapi.yaml`, run `pnpm --filter @workspace/api-spec run codegen` before relying on client/Zod types.
+- After editing `lib/api-spec/openapi.yaml`, run `npm run codegen` before relying on client/Zod types.
 - Guest AI usage needs `SESSION_SECRET` (signed cookie); without Gemini keys, AI endpoints return 503.
 - Stripe webhook must receive the **raw** body (`/api/billing/stripe/webhook` is mounted before `express.json`).
 - Seed upserts by slug; it does not invent verification — places stay `preliminary` unless reviewed.
@@ -144,4 +165,4 @@ PUBLIC_APP_URL=http://localhost:5173
 
 - Phase-1 backlog: product plan / acceptance lives with the project agent docs (tasks A–F).
 - Workspace overview also summarized in root `README.md`.
-- DB package scripts: `pnpm --filter @workspace/db run push|seed`.
+- DB package scripts: `npm run push|seed -w @workspace/db`.

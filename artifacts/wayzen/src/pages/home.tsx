@@ -1,5 +1,5 @@
 import { ArrowRight, MapPin, Sparkles } from 'lucide-react';
-import { useAuth } from '@clerk/react';
+import { useAuth } from '@/lib/auth';
 import {
   getGetOverviewQueryKey, getListPlacesQueryKey,
   useGetOverview, useListPlaces,

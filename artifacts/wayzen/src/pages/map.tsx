@@ -11,7 +11,7 @@ import {
   useGetTrip, useListPlaces,
 } from '@workspace/api-client-react';
 import type { Place, Trip } from '@workspace/api-client-react';
-import { useAuth } from '@clerk/react';
+import { useAuth } from '@/lib/auth';
 import { useSearchParams } from 'wouter';
 import { ArchiveNotice } from '@/components/ArchiveNotice';
 import { EmptyState } from '@/components/EmptyState';

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { ArrowRight, Compass } from 'lucide-react';
-import { useAuth } from '@clerk/react';
+import { useAuth } from '@/lib/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import { getGetProfileQueryKey, useGetProfile, useUpdateProfile } from '@workspace/api-client-react';
 import { Link, useLocation } from 'wouter';

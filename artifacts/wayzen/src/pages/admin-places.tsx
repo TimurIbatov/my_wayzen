@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MapPin, Plus, ShieldAlert, Trash2, X } from 'lucide-react';
-import { useAuth } from '@clerk/react';
+import { useAuth } from '@/lib/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getGetPlaceQueryKey, getGetProfileQueryKey, getGetStorageObjectUrl,

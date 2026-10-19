@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { SignIn, SignUp, useAuth } from '@clerk/react';
+import { SignIn, SignUp } from '@clerk/react';
+import { useAuth } from '@/lib/auth';
 import { Link, Redirect } from 'wouter';
 import { Brand } from '@/components/Brand';
 import { isClerkConfigured } from '@/lib/clerk';

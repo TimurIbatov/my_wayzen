@@ -1,5 +1,5 @@
 import { Bookmark, Compass, GitBranch, Map as MapIcon, MessageCircle } from 'lucide-react';
-import { useAuth, useClerk } from '@clerk/react';
+import { useAuth, useClerk } from '@/lib/auth';
 import { Link, useLocation } from 'wouter';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { basePath } from '@/lib/constants';

@@ -11,7 +11,14 @@ export function requireUserId(req: Request, res: Response): string | null {
 }
 
 export function getUserId(req: Request): string | null {
-  const auth = getAuth(req);
+  // When CLERK_SECRET_KEY is unset, clerkMiddleware is not mounted and getAuth throws.
+  // Treat that as signed-out so public catalog still works and gated routes return 401.
+  let auth: ReturnType<typeof getAuth>;
+  try {
+    auth = getAuth(req);
+  } catch {
+    return null;
+  }
   const claimUserId = (
     auth.sessionClaims as { userId?: unknown } | null | undefined
   )?.userId;

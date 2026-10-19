@@ -2,21 +2,46 @@
   "name": "workspace",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
-    "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
-    "seed": "pnpm --filter @workspace/db run seed",
-    "db:push": "pnpm --filter @workspace/db run push",
-    "codegen": "pnpm --filter @workspace/api-spec run codegen"
-  },
   "private": true,
+  "workspaces": [
+    "artifacts/*",
+    "lib/*",
+    "scripts"
+  ],
+  "scripts": {
+    "postinstall": "node ./scripts/ensure-tailwind-oxide.mjs",
+    "dev": "node -e \"console.log('Run in two terminals:\\n  npm run dev:api\\n  npm run dev:web')\"",
+    "dev:api": "PORT=${PORT:-5055} npm run dev -w @workspace/api-server",
+    "dev:web": "PORT=${PORT:-5173} BASE_PATH=${BASE_PATH:-/} npm run dev -w @workspace/wayzen",
+    "build": "npm run typecheck && npm run build -w @workspace/api-server --if-present && npm run build:wayzen",
+    "build:wayzen": "node ./scripts/build-wayzen.mjs",
+    "build:all": "npm run typecheck && npm run build --workspaces --if-present",
+    "typecheck:libs": "tsc --build",
+    "typecheck": "npm run typecheck:libs && npm run typecheck --workspaces --if-present",
+    "seed": "npm run seed -w @workspace/db",
+    "db:push": "npm run push -w @workspace/db",
+    "codegen": "npm run codegen -w @workspace/api-spec"
+  },
   "dependencies": {
     "@replit/connectors-sdk": "^0.4.3"
   },
   "devDependencies": {
     "prettier": "^3.9.6",
     "typescript": "~5.9.3"
+  },
+  "optionalDependencies": {
+    "@tailwindcss/oxide-darwin-arm64": "4.3.3",
+    "@tailwindcss/oxide-darwin-x64": "4.3.3",
+    "@tailwindcss/oxide-linux-arm64-gnu": "4.3.3",
+    "@tailwindcss/oxide-linux-arm64-musl": "4.3.3",
+    "@tailwindcss/oxide-linux-x64-gnu": "4.3.3",
+    "@tailwindcss/oxide-linux-x64-musl": "4.3.3",
+    "@tailwindcss/oxide-win32-arm64-msvc": "4.3.3",
+    "@tailwindcss/oxide-win32-x64-msvc": "4.3.3"
+  },
+  "overrides": {
+    "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0",
+    "esbuild": "0.28.2",
+    "js-yaml": "4.3.2"
   }
 }

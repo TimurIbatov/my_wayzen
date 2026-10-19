@@ -9,7 +9,10 @@
     "scripts"
   ],
   "scripts": {
-    "build": "npm run typecheck && npm run build --workspaces --if-present",
+    "postinstall": "node ./scripts/ensure-tailwind-oxide.mjs",
+    "build": "npm run typecheck && npm run build -w @workspace/api-server --if-present && npm run build:wayzen",
+    "build:wayzen": "node ./scripts/build-wayzen.mjs",
+    "build:all": "npm run typecheck && npm run build --workspaces --if-present",
     "typecheck:libs": "tsc --build",
     "typecheck": "npm run typecheck:libs && npm run typecheck --workspaces --if-present",
     "seed": "npm run seed -w @workspace/db",
@@ -22,6 +25,16 @@
   "devDependencies": {
     "prettier": "^3.9.6",
     "typescript": "~5.9.3"
+  },
+  "optionalDependencies": {
+    "@tailwindcss/oxide-darwin-arm64": "4.3.3",
+    "@tailwindcss/oxide-darwin-x64": "4.3.3",
+    "@tailwindcss/oxide-linux-arm64-gnu": "4.3.3",
+    "@tailwindcss/oxide-linux-arm64-musl": "4.3.3",
+    "@tailwindcss/oxide-linux-x64-gnu": "4.3.3",
+    "@tailwindcss/oxide-linux-x64-musl": "4.3.3",
+    "@tailwindcss/oxide-win32-arm64-msvc": "4.3.3",
+    "@tailwindcss/oxide-win32-x64-msvc": "4.3.3"
   },
   "overrides": {
     "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0",

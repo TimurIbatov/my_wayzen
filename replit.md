@@ -24,16 +24,30 @@ PORT=5055 npm run dev -w @workspace/api-server
 # Frontend (requires PORT + BASE_PATH). Vite proxies `/api` → API (default :5055).
 PORT=5173 BASE_PATH=/ npm run dev -w @workspace/wayzen
 
-# Quality gates
+# Quality gates (product: api-server + wayzen; mockup-sandbox excluded)
 npm run typecheck
 npm run build
-# Frontend build alone also needs PORT + BASE_PATH:
+# Frontend alone (defaults PORT=5173 BASE_PATH=/ via build:wayzen):
+npm run build:wayzen
+# Or explicitly:
 PORT=5173 BASE_PATH=/ npm run build -w @workspace/wayzen
 
 # After OpenAPI changes
 npm run codegen
 # equivalent: npm run codegen -w @workspace/api-spec
 ```
+
+### Tailwind oxide / npm optional-deps
+
+If Vite fails with `Cannot find native binding` from `@tailwindcss/oxide` (npm/cli#4828), do a clean reinstall on the machine that will build:
+
+```bash
+rm -rf node_modules package-lock.json
+npm install
+npm run build:wayzen
+```
+
+Root `optionalDependencies` list the common `@tailwindcss/oxide-*` platform packages, and `postinstall` runs `scripts/ensure-tailwind-oxide.mjs` to reinstall the matching binding when npm dropped it. Prefer ASCII paths for the checkout when possible (some native loaders struggle with non-ASCII directory names).
 
 ### Environment variables
 

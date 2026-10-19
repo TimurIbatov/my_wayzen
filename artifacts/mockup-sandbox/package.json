@@ -4,10 +4,20 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
-    "preview": "vite preview",
+    "predev": "node ../../scripts/ensure-tailwind-oxide.mjs",
+    "prebuild": "node ../../scripts/ensure-tailwind-oxide.mjs",
+    "dev": "node ../../scripts/run-vite-with-oxide.mjs",
+    "build": "node ../../scripts/run-vite-with-oxide.mjs build",
+    "preview": "node ../../scripts/run-vite-with-oxide.mjs preview",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "optionalDependencies": {
+    "@tailwindcss/oxide": "4.3.3",
+    "@tailwindcss/oxide-linux-x64-gnu": "4.3.3",
+    "@tailwindcss/oxide-linux-x64-musl": "4.3.3",
+    "@tailwindcss/oxide-darwin-arm64": "4.3.3",
+    "@tailwindcss/oxide-darwin-x64": "4.3.3",
+    "@tailwindcss/oxide-win32-x64-msvc": "4.3.3"
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -40,15 +40,20 @@ npm run codegen
 
 ### Tailwind oxide / npm optional-deps
 
-If Vite fails with `Cannot find native binding` from `@tailwindcss/oxide` (npm/cli#4828), do a clean reinstall on the machine that will build:
+Vite/wayzen scripts run `scripts/ensure-tailwind-oxide.mjs` (also on `postinstall`): installs the platform `@tailwindcss/oxide-*` package if npm dropped it, copies the `.node` into the oxide package, and sets `NAPI_RS_NATIVE_LIBRARY_PATH` to an ASCII cache under `~/.cache/wayzen-oxide/` (helps non-ASCII paths like `Рабочий стол`).
+
+If it still fails:
 
 ```bash
+# Recommended: ASCII checkout path
+mkdir -p ~/projects && cd ~/projects
+git clone <your-fork-url> my_wayzen && cd my_wayzen
+git checkout cursor/npm-workspaces-69f8
 rm -rf node_modules package-lock.json
 npm install
-npm run build:wayzen
+PORT=5173 BASE_PATH=/ npm run dev -w @workspace/wayzen
+# or: npm run dev:web
 ```
-
-Root `optionalDependencies` list the common `@tailwindcss/oxide-*` platform packages, and `postinstall` runs `scripts/ensure-tailwind-oxide.mjs` to reinstall the matching binding when npm dropped it. Prefer ASCII paths for the checkout when possible (some native loaders struggle with non-ASCII directory names).
 
 ### Environment variables
 

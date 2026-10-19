@@ -6,8 +6,11 @@
  * 2) copying the .node into @tailwindcss/oxide/ (local require path)
  * 3) copying it into an ASCII cache and exporting NAPI_RS_NATIVE_LIBRARY_PATH
  *
- * When run with --print-env, prints `export NAPI_RS_NATIVE_LIBRARY_PATH=...`
- * for shell wrappers.
+ * Load checks run in a child process so a native dlopen failure cannot take
+ * down the parent (and we never re-require a native addon in-process).
+ *
+ * --print-env  print NAPI_RS_NATIVE_LIBRARY_PATH=... for wrappers
+ * --quiet      less logging
  */
 import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
@@ -16,7 +19,6 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
-  rmSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,7 +30,7 @@ const printEnv = process.argv.includes("--print-env");
 const quiet = process.argv.includes("--quiet");
 
 function log(...args) {
-  if (!quiet || printEnv) console.warn(...args);
+  if (!quiet) console.warn(...args);
 }
 
 function oxideVersion() {
@@ -55,64 +57,68 @@ function platformBinding() {
   const { platform, arch } = process;
   const musl = platform === "linux" && isMusl();
 
-  const map = {
-    "linux-x64-gnu": {
-      pkg: "@tailwindcss/oxide-linux-x64-gnu",
-      localFile: "tailwindcss-oxide.linux-x64-gnu.node",
-    },
-    "linux-x64-musl": {
-      pkg: "@tailwindcss/oxide-linux-x64-musl",
-      localFile: "tailwindcss-oxide.linux-x64-musl.node",
-    },
-    "linux-arm64-gnu": {
-      pkg: "@tailwindcss/oxide-linux-arm64-gnu",
-      localFile: "tailwindcss-oxide.linux-arm64-gnu.node",
-    },
-    "linux-arm64-musl": {
-      pkg: "@tailwindcss/oxide-linux-arm64-musl",
-      localFile: "tailwindcss-oxide.linux-arm64-musl.node",
-    },
-    "darwin-arm64": {
-      pkg: "@tailwindcss/oxide-darwin-arm64",
-      localFile: "tailwindcss-oxide.darwin-arm64.node",
-    },
-    "darwin-x64": {
-      pkg: "@tailwindcss/oxide-darwin-x64",
-      localFile: "tailwindcss-oxide.darwin-x64.node",
-    },
-    "win32-x64": {
-      pkg: "@tailwindcss/oxide-win32-x64-msvc",
-      localFile: "tailwindcss-oxide.win32-x64-msvc.node",
-    },
-    "win32-arm64": {
-      pkg: "@tailwindcss/oxide-win32-arm64-msvc",
-      localFile: "tailwindcss-oxide.win32-arm64-msvc.node",
-    },
-  };
-
   if (platform === "linux" && arch === "x64") {
-    return musl ? map["linux-x64-musl"] : map["linux-x64-gnu"];
+    return musl
+      ? {
+          pkg: "@tailwindcss/oxide-linux-x64-musl",
+          localFile: "tailwindcss-oxide.linux-x64-musl.node",
+        }
+      : {
+          pkg: "@tailwindcss/oxide-linux-x64-gnu",
+          localFile: "tailwindcss-oxide.linux-x64-gnu.node",
+        };
   }
   if (platform === "linux" && arch === "arm64") {
-    return musl ? map["linux-arm64-musl"] : map["linux-arm64-gnu"];
+    return musl
+      ? {
+          pkg: "@tailwindcss/oxide-linux-arm64-musl",
+          localFile: "tailwindcss-oxide.linux-arm64-musl.node",
+        }
+      : {
+          pkg: "@tailwindcss/oxide-linux-arm64-gnu",
+          localFile: "tailwindcss-oxide.linux-arm64-gnu.node",
+        };
   }
-  if (platform === "darwin" && arch === "arm64") return map["darwin-arm64"];
-  if (platform === "darwin" && arch === "x64") return map["darwin-x64"];
-  if (platform === "win32" && arch === "x64") return map["win32-x64"];
-  if (platform === "win32" && arch === "arm64") return map["win32-arm64"];
+  if (platform === "darwin" && arch === "arm64") {
+    return {
+      pkg: "@tailwindcss/oxide-darwin-arm64",
+      localFile: "tailwindcss-oxide.darwin-arm64.node",
+    };
+  }
+  if (platform === "darwin" && arch === "x64") {
+    return {
+      pkg: "@tailwindcss/oxide-darwin-x64",
+      localFile: "tailwindcss-oxide.darwin-x64.node",
+    };
+  }
+  if (platform === "win32" && arch === "x64") {
+    return {
+      pkg: "@tailwindcss/oxide-win32-x64-msvc",
+      localFile: "tailwindcss-oxide.win32-x64-msvc.node",
+    };
+  }
+  if (platform === "win32" && arch === "arm64") {
+    return {
+      pkg: "@tailwindcss/oxide-win32-arm64-msvc",
+      localFile: "tailwindcss-oxide.win32-arm64-msvc.node",
+    };
+  }
   return null;
 }
 
-function canLoadOxide() {
-  try {
-    // Clear require cache so copies take effect in this process.
-    const id = require.resolve(join(root, "node_modules/@tailwindcss/oxide"));
-    delete require.cache[id];
-    require(join(root, "node_modules/@tailwindcss/oxide"));
-    return true;
-  } catch {
-    return false;
-  }
+/** Probe oxide load in a child — never dlopen native addons in this process. */
+function canLoadOxide(envPath) {
+  const oxidePath = join(root, "node_modules/@tailwindcss/oxide");
+  const env = { ...process.env };
+  if (envPath) env.NAPI_RS_NATIVE_LIBRARY_PATH = envPath;
+  else delete env.NAPI_RS_NATIVE_LIBRARY_PATH;
+
+  const probe = spawnSync(
+    process.execPath,
+    ["-e", `require(${JSON.stringify(oxidePath)});`],
+    { env, encoding: "utf8" },
+  );
+  return probe.status === 0;
 }
 
 function findNodeFile(dir) {
@@ -125,7 +131,6 @@ function asciiCachePath(localFile, version) {
   const base =
     process.env.WAYZEN_OXIDE_CACHE ||
     join(homedir() || tmpdir(), ".cache", "wayzen-oxide", version || "unknown");
-  // Force ASCII-only path components.
   const safe = base.replace(/[^\x20-\x7E]/g, "_");
   return { dir: safe, file: join(safe, localFile) };
 }
@@ -146,23 +151,20 @@ function installPlatformPackage(pkg, version) {
       "--no-audit",
       "--force",
     ],
-    { cwd: root, stdio: quiet ? "ignore" : "inherit", shell: process.platform === "win32" },
+    {
+      cwd: root,
+      stdio: quiet ? "ignore" : "inherit",
+      shell: process.platform === "win32",
+    },
   );
 }
 
 function stageBinding(binding, version) {
   const oxideDir = join(root, "node_modules/@tailwindcss/oxide");
   const pkgDir = join(root, "node_modules", binding.pkg);
-  let source = findNodeFile(pkgDir);
-  if (!source) {
-    // Sometimes nested under .pnpm-like layouts or workspace hoists differently.
-    source = findNodeFile(join(root, "node_modules/@tailwindcss", binding.pkg.replace("@tailwindcss/", "")));
-  }
-  if (!source || !existsSync(source)) {
-    return null;
-  }
+  const source = findNodeFile(pkgDir);
+  if (!source) return null;
 
-  // 1) Local file next to oxide index.js (first require attempt in napi loader).
   const localTarget = join(oxideDir, binding.localFile);
   try {
     copyFileSync(source, localTarget);
@@ -170,86 +172,69 @@ function stageBinding(binding, version) {
     log("[ensure-tailwind-oxide] copy into oxide package failed:", err.message);
   }
 
-  // 2) ASCII cache for NAPI_RS_NATIVE_LIBRARY_PATH (helps non-ASCII checkouts).
   const cache = asciiCachePath(binding.localFile, version);
   try {
     mkdirSync(cache.dir, { recursive: true });
     copyFileSync(source, cache.file);
-    process.env.NAPI_RS_NATIVE_LIBRARY_PATH = cache.file;
     return cache.file;
   } catch (err) {
     log("[ensure-tailwind-oxide] ASCII cache copy failed:", err.message);
-    // Fall back to source path.
-    process.env.NAPI_RS_NATIVE_LIBRARY_PATH = source;
     return source;
   }
 }
 
 function main() {
   const oxideDir = join(root, "node_modules/@tailwindcss/oxide");
-  if (!existsSync(oxideDir)) {
-    if (printEnv) process.exit(0);
-    process.exit(0);
-  }
+  if (!existsSync(oxideDir)) process.exit(0);
 
   const binding = platformBinding();
   const version = oxideVersion();
 
-  if (canLoadOxide()) {
-    // Still stage ASCII path for future child processes / non-ASCII cwd.
-    if (binding && version) {
-      const staged = stageBinding(binding, version);
-      if (printEnv && staged) {
-        // Print for eval by shell wrappers.
-        process.stdout.write(`NAPI_RS_NATIVE_LIBRARY_PATH=${staged}\n`);
+  let staged = null;
+  if (binding && version) {
+    // Prefer staging whenever the platform package exists.
+    const pkgDir = join(root, "node_modules", binding.pkg);
+    if (!existsSync(pkgDir) || !findNodeFile(pkgDir)) {
+      if (!canLoadOxide()) {
+        installPlatformPackage(binding.pkg, version);
       }
+    }
+    if (existsSync(join(root, "node_modules", binding.pkg))) {
+      staged = stageBinding(binding, version);
+    }
+  }
+
+  if (canLoadOxide(staged) || canLoadOxide()) {
+    if (printEnv && staged) {
+      process.stdout.write(`NAPI_RS_NATIVE_LIBRARY_PATH=${staged}\n`);
     }
     process.exit(0);
   }
 
-  if (!binding || !version) {
-    console.error(
-      "[ensure-tailwind-oxide] @tailwindcss/oxide native binding missing; platform unsupported/unknown.",
-    );
-    console.error(
-      "  Recovery: rm -rf node_modules package-lock.json && npm install",
-    );
-    console.error("  Prefer ASCII path: ~/projects/my_wayzen");
-    process.exit(printEnv ? 1 : 0);
+  // Last attempt: install + stage + probe.
+  if (binding && version) {
+    installPlatformPackage(binding.pkg, version);
+    staged = stageBinding(binding, version);
   }
 
-  const pkgDir = join(root, "node_modules", binding.pkg);
-  if (!existsSync(pkgDir) || !findNodeFile(pkgDir)) {
-    const result = installPlatformPackage(binding.pkg, version);
-    if (result.status !== 0) {
-      console.error(
-        `[ensure-tailwind-oxide] failed to install ${binding.pkg}@${version}`,
-      );
+  if (canLoadOxide(staged) || canLoadOxide()) {
+    log(
+      `[ensure-tailwind-oxide] ready (${binding?.pkg}@${version}${staged ? `; cache ${staged}` : ""})`,
+    );
+    if (printEnv && staged) {
+      process.stdout.write(`NAPI_RS_NATIVE_LIBRARY_PATH=${staged}\n`);
     }
+    process.exit(0);
   }
 
-  const staged = stageBinding(binding, version);
-
-  // Clear oxide from cache and retry with env set.
-  if (staged) {
-    process.env.NAPI_RS_NATIVE_LIBRARY_PATH = staged;
-  }
-
-  if (!canLoadOxide()) {
-    console.error("[ensure-tailwind-oxide] still cannot load @tailwindcss/oxide.");
-    console.error(
-      "  Recovery: rm -rf node_modules package-lock.json && npm install",
-    );
-    console.error(
-      "  If the path has non-ASCII characters (e.g. Рабочий стол), clone to ~/projects/my_wayzen",
-    );
-    process.exit(printEnv ? 1 : 0);
-  }
-
-  log(`[ensure-tailwind-oxide] ready (${binding.pkg}@${version})`);
-  if (printEnv && staged) {
-    process.stdout.write(`NAPI_RS_NATIVE_LIBRARY_PATH=${staged}\n`);
-  }
+  console.error("[ensure-tailwind-oxide] still cannot load @tailwindcss/oxide.");
+  console.error(
+    "  Recovery: rm -rf node_modules package-lock.json && npm install",
+  );
+  console.error(
+    "  Prefer ASCII checkout: mkdir -p ~/projects && git clone … ~/projects/my_wayzen",
+  );
+  process.exit(printEnv ? 1 : 0);
 }
 
 main();

@@ -20,11 +20,11 @@ export function AppSidebar({ favoriteCount }: { favoriteCount: number }) {
     { href: '/favorites', label: t('nav.favorites'), icon: Bookmark, test: 'favorites', badge: favoriteCount || undefined },
   ] as const;
 
-  const active = (href: string) => path === href || path.startsWith(`${href}/`) || (href === '/ai' && path === '/');
+  const active = (href: string) => path === href || path.startsWith(`${href}/`);
 
   return (
     <aside className="wz-sidebar" data-testid="app-sidebar">
-      <Link href="/ai" className="wz-side-logo" aria-label="WayZen" data-testid="link-sidebar-home">
+      <Link href="/" className="wz-side-logo" aria-label="WayZen" data-testid="link-sidebar-home">
         <span className="wz-side-mark" aria-hidden><Compass size={18} /></span>
       </Link>
       <nav className="wz-side-nav" aria-label={t('nav.aria')}>

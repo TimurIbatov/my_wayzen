@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { Route, Switch, Router as WouterRouter, useLocation, Redirect } from 'wouter';
+import { Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import { setAuthTokenGetter } from '@workspace/api-client-react';
 import { AuthShell, useAuth, useClerk } from '@/lib/auth';
 import { AppSidebar } from '@/components/AppSidebar';
@@ -11,6 +11,7 @@ import { AIChat } from '@/pages/ai-chat';
 import { AdminPlaces } from '@/pages/admin-places';
 import { Catalog } from '@/pages/catalog';
 import { Favorites } from '@/pages/favorites';
+import { Landing } from '@/pages/landing';
 import { MapPage } from '@/pages/map';
 import { Onboarding } from '@/pages/onboarding';
 import { PlaceDetail } from '@/pages/place-detail';
@@ -58,12 +59,14 @@ function SiteRouter() {
   const { isSignedIn } = useAuth();
   const { t } = useI18n();
   const isAuthPath = currentPath.startsWith('/sign-in') || currentPath.startsWith('/sign-up');
+  const isLandingPath = currentPath === '/' || currentPath === '';
+  const hideChrome = isAuthPath || isLandingPath;
   return (
-    <div className={`shell wz-night${isAuthPath ? ' wz-auth-shell' : ''}`}>
-      {!isAuthPath && <AppSidebar favoriteCount={favorites.values.length} />}
+    <div className={`shell wz-night${hideChrome ? ' wz-auth-shell' : ''}${isLandingPath ? ' wz-landing-shell' : ''}`}>
+      {!hideChrome && <AppSidebar favoriteCount={favorites.values.length} />}
       <div className="wz-main">
         <Switch>
-          <Route path="/">{() => <Redirect to="/ai" />}</Route>
+          <Route path="/" component={Landing} />
           <Route path="/sign-in/*?" component={SignInPage} />
           <Route path="/sign-up/*?" component={SignUpPage} />
           <Route path="/places" component={Catalog} />

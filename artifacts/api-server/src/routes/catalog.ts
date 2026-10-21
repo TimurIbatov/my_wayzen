@@ -18,6 +18,7 @@ import {
 import { db, placesTable } from "@workspace/db";
 import {
   requireAdminId,
+  isUniqueViolation,
   sendInvalidInput,
   sendServerError,
 } from "./helpers";
@@ -131,7 +132,10 @@ router.post("/admin/places", async (req, res) => {
       .values(parsed.data)
       .returning();
     return res.status(201).json(CreatePlaceResponse.parse(place));
-  } catch {
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      return res.status(409).json({ error: "A place with this slug already exists." });
+    }
     return sendServerError(res);
   }
 });

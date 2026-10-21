@@ -64,9 +64,10 @@ export function AdminPlaces() {
   const [creating, setCreating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [saveError, setSaveError] = useState('');
   const form = useForm<AdminForm>({ defaultValues: adminBlank });
   const previewUrls = form.watch('imageUrls').split('\n').map(item => item.trim()).filter(Boolean);
-  useEffect(() => { form.reset(adminValues(editing ?? undefined)); }, [editing, creating, form]);
+  useEffect(() => { form.reset(adminValues(editing ?? undefined)); setSaveError(''); setUploadError(''); }, [editing, creating, form]);
   const uploadPhotos = async (files: FileList | null) => {
     if (!files?.length) return;
     setUploading(true);
@@ -103,7 +104,14 @@ export function AdminPlaces() {
   if (!isSignedIn) return <main className="wrap load-shell"><EmptyState icon={<ShieldAlert />} title="Нужен вход" copy="Модерация доступна только авторизованным пользователям с ролью администратора." action={<Link className="btn btn-primary" href="/sign-in">Войти</Link>} /></main>;
   if (profile.isLoading) return <main className="wrap load-shell"><div className="skeleton" style={{ height: 250 }} /></main>;
   if (!profile.data?.isAdmin) return <main className="wrap load-shell"><EmptyState icon={<ShieldAlert />} title="Доступ закрыт" copy="У этого аккаунта нет прав модератора." action={<Link className="btn btn-quiet" href="/">На главную</Link>} /></main>;
-  const submit = form.handleSubmit(values => {
+  const submit = form.handleSubmit(async values => {
+    if (values.verificationStatus === 'verified') {
+      const ok = window.confirm(
+        'Статус «Проверено» можно ставить только после реальной редакционной проверки на месте или по надёжным источникам. Продолжить?',
+      );
+      if (!ok) return;
+    }
+    setSaveError('');
     const common = {
       nameRu: values.nameRu, nameEn: values.nameEn, nameUz: values.nameUz || null, latitude: Number(values.latitude), longitude: Number(values.longitude),
       region: values.region, category: values.category, kind: values.kind, summaryRu: values.summaryRu, summaryEn: values.summaryEn,
@@ -112,9 +120,20 @@ export function AdminPlaces() {
       seasonality: values.seasonality.split(',').map(item => item.trim()).filter(Boolean), accessDifficulty: values.accessDifficulty,
       verificationStatus: values.verificationStatus, source: values.source,
     };
-    if (editing) { const { nameRu, nameEn, ...rest } = common; const patch: PlaceUpdate = { ...rest, nameRu, nameEn }; update.mutate({ slug: editing.slug, data: patch }); }
-    else { const data: PlaceInput = { slug: values.slug, ...common }; create.mutate({ data }); }
-    setEditing(null); setCreating(false);
+    try {
+      if (editing) {
+        const { nameRu, nameEn, ...rest } = common;
+        const patch: PlaceUpdate = { ...rest, nameRu, nameEn };
+        await update.mutateAsync({ slug: editing.slug, data: patch });
+      } else {
+        const data: PlaceInput = { slug: values.slug, ...common };
+        await create.mutateAsync({ data });
+      }
+      setEditing(null);
+      setCreating(false);
+    } catch (error) {
+      setSaveError(showErrorText(error));
+    }
   });
   const busy = create.isPending || update.isPending;
   return <main className="wrap">
@@ -138,7 +157,10 @@ export function AdminPlaces() {
             {previewUrls.map((url, index) => <img key={`${url}-${index}`} src={url} alt={`Превью ${index + 1}`} loading="lazy" style={{ width: '100%', height: 96, objectFit: 'cover', borderRadius: 10, background: '#e6e9e2' }} onError={event => { event.currentTarget.style.display = 'none'; }} />)}
           </div>}
         </div>
-      </div><button type="submit" disabled={busy || uploading} className="btn btn-primary" data-testid="button-save-place">{busy ? 'Сохраняем…' : uploading ? 'Загружаем фото…' : 'Сохранить запись'}</button></form></Form>
+      </div>
+        {saveError && <p role="alert" data-testid="status-admin-save-error" style={{ marginTop: 12 }}>{saveError}</p>}
+        <button type="submit" disabled={busy || uploading} className="btn btn-primary" data-testid="button-save-place">{busy ? 'Сохраняем…' : uploading ? 'Загружаем фото…' : 'Сохранить запись'}</button>
+      </form></Form>
     </section>}
     {admin.isLoading ? <div className="load-shell"><div className="skeleton" style={{ height: 280 }} /></div> : admin.isError ? <div style={{ marginTop: 16 }}><LoadError error={admin.error} onRetry={() => void admin.refetch()} /></div> :
       admin.data?.length ? <section className="section">{admin.data.map(place => <div className="trip-row" key={place.slug}><span className="trip-index"><MapPin size={18} /></span><span className="trip-copy"><strong>{placeName(place)}</strong><span>{place.slug} · {place.region} · {place.verificationStatus}</span></span><button className="btn btn-quiet" onClick={() => { setCreating(false); setEditing(place); }} data-testid={`button-edit-place-${place.slug}`}>Изменить</button><button className="icon-btn" aria-label="Удалить место" onClick={() => { if (window.confirm(`Удалить запись «${placeName(place)}»?`)) remove.mutate({ slug: place.slug }); }} data-testid={`button-delete-place-${place.slug}`}><Trash2 size={16} /></button></div>)}</section> :

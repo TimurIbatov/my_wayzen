@@ -159,7 +159,7 @@ PUBLIC_APP_URL=http://localhost:5173
 - Guest AI usage needs `SESSION_SECRET` (signed cookie); without Gemini keys, AI endpoints return 503.
 - Stripe webhook must receive the **raw** body (`/api/billing/stripe/webhook` is mounted before `express.json`).
 - Seed upserts by slug; it does not invent verification — places stay `preliminary` unless reviewed.
-- Catalog size is intentionally small in Phase 1 (~16 seed places); do not treat it as a complete national guide.
+- Catalog seed is ~50 preliminary places in Phase 1; do not treat it as a complete or verified national guide. Grow further via admin.
 
 ## Pointers
 

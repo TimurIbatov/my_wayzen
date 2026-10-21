@@ -53,3 +53,13 @@ export function sendInvalidInput(res: Response): void {
 export function sendServerError(res: Response): void {
   res.status(500).json({ error: "The request could not be completed." });
 }
+
+/** Postgres unique_violation — e.g. duplicate place slug on create. */
+export function isUniqueViolation(error: unknown): boolean {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: string }).code === "23505",
+  );
+}

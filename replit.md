@@ -33,6 +33,10 @@ npm run build:wayzen
 # Or explicitly:
 PORT=5173 BASE_PATH=/ npm run build -w @workspace/wayzen
 
+# Vercel + Neon Phase 1 (Next catalog API) — see docs/deploy-vercel-neon.md
+npm run dev:web-next
+npm run build:web
+
 # After OpenAPI changes
 npm run codegen
 # equivalent: npm run codegen -w @workspace/api-spec

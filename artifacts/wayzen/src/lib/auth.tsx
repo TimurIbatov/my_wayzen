@@ -6,7 +6,12 @@ import {
 } from 'react';
 import { ClerkProvider, useAuth as useClerkAuth, useClerk as useClerkApi } from '@clerk/react';
 import { shadcn } from '@clerk/themes';
-import { isClerkConfigured, publishableKeyFromHost } from '@/lib/clerk';
+import {
+  isClerkConfigured,
+  publishableKeyFromHost,
+  resolveClerkProxyUrl,
+  resolveClerkPublishableKey,
+} from '@/lib/clerk';
 import { basePath } from '@/lib/constants';
 
 type AuthValue = {
@@ -80,9 +85,12 @@ export function AuthShell({ children, routerPush, routerReplace }: AuthShellProp
 
   const clerkPubKey = publishableKeyFromHost(
     window.location.hostname,
-    import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+    resolveClerkPublishableKey(
+      import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+      import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    ),
   );
-  const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+  const clerkProxyUrl = resolveClerkProxyUrl();
 
   return (
     <ClerkProvider

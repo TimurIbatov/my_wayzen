@@ -21,7 +21,7 @@ function AuthUnavailable({ reason }: { reason?: 'missing' | 'failed' }) {
       <span className="wz-kicker">Clerk</span>
       <h2>{t('auth.missingTitle')}</h2>
       <p>{reason === 'failed' ? t('auth.failedCopy') : t('auth.missingCopy')}</p>
-      <code>VITE_CLERK_PUBLISHABLE_KEY=pk_test_…</code>
+      <code>VITE_CLERK_PUBLISHABLE_KEY</code> (or <code>NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code>) in repo-root <code>.env</code>, then restart <code>dev:web</code> / <code>dev:api</code>
       <Link className="btn btn-primary" href="/ai" data-testid="link-auth-home">{t('auth.backHome')}</Link>
     </div>
   );

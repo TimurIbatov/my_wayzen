@@ -4,9 +4,10 @@
  * @clerk/react no longer re-exports this helper from `@clerk/react/internal`.
  *
  * Accepted publishable key env names (first match wins):
+ *   __WAYZEN_CLERK_PUBLISHABLE_KEY__ (Vite define from root/package .env)
  *   VITE_CLERK_PUBLISHABLE_KEY
- *   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY  (Next-style alias)
- *   CLERK_PUBLISHABLE_KEY               (shared with API; injected by Vite config)
+ *   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+ *   CLERK_PUBLISHABLE_KEY (bridged into the defines above at Vite config time)
  */
 
 function decodeClerkFrontendApi(key: string) {
@@ -24,7 +25,9 @@ function usablePublishableKey(key?: string) {
   if (!(value?.startsWith('pk_test_') || value?.startsWith('pk_live_'))) return undefined;
   const frontendApi = decodeClerkFrontendApi(value);
   // Local preview stub keys (e.g. preview-wayzen.example$) cannot load Clerk widgets.
-  if (!frontendApi || frontendApi.includes('example') || frontendApi.startsWith('preview-')) return undefined;
+  if (!frontendApi || frontendApi.includes('example') || frontendApi.startsWith('preview-')) {
+    return undefined;
+  }
   return value;
 }
 
@@ -39,8 +42,30 @@ export function resolveClerkPublishableKey(
   return undefined;
 }
 
+function definedPublishableKey() {
+  try {
+    // Injected by vite.config.ts — empty string when unset.
+    return typeof __WAYZEN_CLERK_PUBLISHABLE_KEY__ === 'string'
+      ? __WAYZEN_CLERK_PUBLISHABLE_KEY__
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function definedProxyUrl() {
+  try {
+    return typeof __WAYZEN_CLERK_PROXY_URL__ === 'string'
+      ? __WAYZEN_CLERK_PROXY_URL__
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 const envKey = () =>
   resolveClerkPublishableKey(
+    definedPublishableKey(),
     import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
     import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
   );
@@ -61,6 +86,7 @@ export function publishableKeyFromHost(host: string, fallbackKey?: string): stri
 
 export function resolveClerkProxyUrl(): string | undefined {
   const value = (
+    definedProxyUrl() ||
     import.meta.env.VITE_CLERK_PROXY_URL ||
     import.meta.env.NEXT_PUBLIC_CLERK_PROXY_URL ||
     ''

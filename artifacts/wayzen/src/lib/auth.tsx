@@ -90,6 +90,7 @@ export function AuthShell({ children, routerPush, routerReplace }: AuthShellProp
       import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
     ),
   );
+  // resolveClerkProxyUrl already considers Vite define + VITE_/NEXT_PUBLIC_ aliases.
   const clerkProxyUrl = resolveClerkProxyUrl();
 
   return (

@@ -1,7 +1,8 @@
 import path from 'path';
+import { existsSync, readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
 
@@ -28,55 +29,117 @@ if (!basePath) {
 }
 
 const appDir = path.resolve(import.meta.dirname);
-/** Monorepo root — Clerk / DB secrets live in root `.env`, not artifacts/wayzen/.env */
+/** Monorepo root — primary place for `.env` / Cursor secrets dump. */
 const rootDir = path.resolve(appDir, '../..');
 
-export default defineConfig(async ({ mode }) => {
-  // Load root .env* so Cursor/local secrets apply even when cwd is the package.
-  const fileEnv = loadEnv(mode, rootDir, '');
-  const clerkPublishable =
-    process.env.VITE_CLERK_PUBLISHABLE_KEY?.trim() ||
-    fileEnv.VITE_CLERK_PUBLISHABLE_KEY?.trim() ||
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() ||
-    fileEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() ||
-    process.env.CLERK_PUBLISHABLE_KEY?.trim() ||
-    fileEnv.CLERK_PUBLISHABLE_KEY?.trim() ||
-    '';
-  const clerkProxy =
-    process.env.VITE_CLERK_PROXY_URL?.trim() ||
-    fileEnv.VITE_CLERK_PROXY_URL?.trim() ||
-    process.env.NEXT_PUBLIC_CLERK_PROXY_URL?.trim() ||
-    fileEnv.NEXT_PUBLIC_CLERK_PROXY_URL?.trim() ||
-    '';
+function stripEnvValue(raw: string) {
+  let v = raw.trim();
+  if (
+    (v.startsWith('"') && v.endsWith('"')) ||
+    (v.startsWith("'") && v.endsWith("'"))
+  ) {
+    v = v.slice(1, -1);
+  }
+  if (v.charCodeAt(0) === 0xfeff) v = v.slice(1);
+  return v.trim();
+}
 
-  // Bridge non-VITE names into the client bundle (Vite only auto-exposes VITE_/envPrefix).
-  if (clerkPublishable && !process.env.VITE_CLERK_PUBLISHABLE_KEY) {
-    process.env.VITE_CLERK_PUBLISHABLE_KEY = clerkPublishable;
+/** Parse a dotenv file manually (handles BOM / odd quoting). */
+function parseDotEnvFile(filePath: string): Record<string, string> {
+  if (!existsSync(filePath)) return {};
+  const text = readFileSync(filePath, 'utf8').replace(/^\uFEFF/, '');
+  const out: Record<string, string> = {};
+  for (const line of text.split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    const eq = t.indexOf('=');
+    if (eq <= 0) continue;
+    out[t.slice(0, eq).trim()] = stripEnvValue(t.slice(eq + 1));
   }
-  if (clerkProxy && !process.env.VITE_CLERK_PROXY_URL) {
-    process.env.VITE_CLERK_PROXY_URL = clerkProxy;
+  return out;
+}
+
+function mergeClerkEnv(mode: string) {
+  // Vite loadEnv (root wins over package) + manual parse as fallback.
+  const fromRoot = loadEnv(mode, rootDir, '');
+  const fromApp = loadEnv(mode, appDir, '');
+  const manual = {
+    ...parseDotEnvFile(path.join(appDir, '.env')),
+    ...parseDotEnvFile(path.join(appDir, '.env.local')),
+    ...parseDotEnvFile(path.join(rootDir, '.env')),
+    ...parseDotEnvFile(path.join(rootDir, '.env.local')),
+    ...parseDotEnvFile(path.join(rootDir, `.env.${mode}`)),
+    ...parseDotEnvFile(path.join(rootDir, `.env.${mode}.local`)),
+  };
+
+  const pick = (...keys: string[]) => {
+    for (const key of keys) {
+      const fromProcess = process.env[key]?.trim();
+      if (fromProcess) return stripEnvValue(fromProcess);
+      const fromManual = manual[key];
+      if (fromManual) return fromManual;
+      const fromViteRoot = fromRoot[key]?.trim();
+      if (fromViteRoot) return stripEnvValue(fromViteRoot);
+      const fromViteApp = fromApp[key]?.trim();
+      if (fromViteApp) return stripEnvValue(fromViteApp);
+    }
+    return '';
+  };
+
+  const publishable = pick(
+    'VITE_CLERK_PUBLISHABLE_KEY',
+    'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
+    'CLERK_PUBLISHABLE_KEY',
+  );
+  const proxy = pick('VITE_CLERK_PROXY_URL', 'NEXT_PUBLIC_CLERK_PROXY_URL');
+
+  // So Vite's built-in import.meta.env exposure also sees the bridged values.
+  if (publishable) {
+    process.env.VITE_CLERK_PUBLISHABLE_KEY = publishable;
+    if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = publishable;
+    }
   }
+  if (proxy) {
+    process.env.VITE_CLERK_PROXY_URL = proxy;
+  }
+
+  return { publishable, proxy };
+}
+
+function clerkEnvLogPlugin(loaded: boolean): Plugin {
+  return {
+    name: 'wayzen-clerk-env-log',
+    configResolved() {
+      // Never log the key value — boolean only.
+      console.log(`[wayzen] clerkPublishableKeyLoaded: ${loaded}`);
+      if (!loaded) {
+        console.log(
+          '[wayzen] Tip: put VITE_CLERK_PUBLISHABLE_KEY (or CLERK_PUBLISHABLE_KEY) in repo-root .env, then fully restart Vite. See docs/clerk-env.md / npm run check:clerk-env',
+        );
+      }
+    },
+  };
+}
+
+export default defineConfig(async ({ mode }) => {
+  const { publishable: clerkPublishable, proxy: clerkProxy } = mergeClerkEnv(mode);
+  const clerkPublishableKeyLoaded = Boolean(
+    clerkPublishable.startsWith('pk_test_') || clerkPublishable.startsWith('pk_live_'),
+  );
 
   return {
     base: basePath,
-    // Critical: read repo-root `.env` / `.env.local` (not only artifacts/wayzen/.env).
+    // Prefer monorepo root; package-local .env still merged above via loadEnv(appDir).
     envDir: rootDir,
     envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
+    // Use custom defines — do NOT overwrite import.meta.env.* via define (breaks Vite env).
     define: {
-      'import.meta.env.VITE_CLERK_PUBLISHABLE_KEY': JSON.stringify(clerkPublishable),
-      'import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY': JSON.stringify(
-        process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() ||
-          fileEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() ||
-          clerkPublishable,
-      ),
-      'import.meta.env.VITE_CLERK_PROXY_URL': JSON.stringify(clerkProxy),
-      'import.meta.env.NEXT_PUBLIC_CLERK_PROXY_URL': JSON.stringify(
-        process.env.NEXT_PUBLIC_CLERK_PROXY_URL?.trim() ||
-          fileEnv.NEXT_PUBLIC_CLERK_PROXY_URL?.trim() ||
-          clerkProxy,
-      ),
+      __WAYZEN_CLERK_PUBLISHABLE_KEY__: JSON.stringify(clerkPublishable),
+      __WAYZEN_CLERK_PROXY_URL__: JSON.stringify(clerkProxy),
     },
     plugins: [
+      clerkEnvLogPlugin(clerkPublishableKeyLoaded),
       react(),
       tailwindcss(),
       runtimeErrorOverlay(),
@@ -118,9 +181,9 @@ export default defineConfig(async ({ mode }) => {
       allowedHosts: true,
       fs: {
         strict: true,
+        // Allow reading monorepo root when tooling needs it.
+        allow: [rootDir],
       },
-      // Local npm: frontend (5173) and API (5055) are separate processes.
-      // Proxy /api so the SPA can call relative /api/* without CORS/base URL setup.
       proxy: {
         '/api': {
           target: process.env.API_PROXY_TARGET || 'http://127.0.0.1:5055',

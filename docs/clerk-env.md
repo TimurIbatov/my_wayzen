@@ -1,60 +1,81 @@
 # Clerk environment variables (WayZen)
 
-Do **not** paste secret values into chat. Put them in **repo-root** `.env` (or Cursor environment secrets) and **restart** both API and Vite.
+Do **not** paste secret values into chat. Put them in **repo-root** `.env` and **fully restart** API + Vite.
 
-## Why keys “did nothing”
+## Why `/sign-up` still shows “VITE_CLERK_PUBLISHABLE_KEY not set”
 
-1. Vite used to look for `.env` under `artifacts/wayzen/` only. Keys in **root** `.env` were ignored by the SPA until `envDir` pointed at the monorepo root.
-2. Vite only exposes `VITE_*` (and now also `NEXT_PUBLIC_*`) to the browser. A bare `CLERK_PUBLISHABLE_KEY` is bridged by Vite config, but **`CLERK_SECRET_KEY` must stay server-side**.
-3. Changing `.env` does **not** hot-reload into a running `dev:web` / `dev:api` — restart both processes.
-4. Without a usable publishable key, the SPA stays in **guest** mode (no ClerkProvider) — sign-up looks broken and chat history never syncs.
+Typical causes (in order):
+
+1. **Old Vite process** — HMR does not reload env. Kill the terminal / tmux session and start again.
+2. **Wrong file location** — keys must be in **monorepo root** `.env` (next to `package.json`), not only under `artifacts/wayzen/`. Tip Vite loads **both**, but root is canonical.
+3. **Wrong filename** — `.env.txt` / `env` / `.env.rtf` are ignored. Name must be exactly `.env` (or `.env.local`).
+4. **Not on tip** — need the envDir + bridge fix: `git pull` on `cursor/vercel-neon-deploy-69f8` (PR #6).
+5. **Placeholder / invalid `pk_`** — example `pk_test_...` from `.env.example` is rejected. Use a real Clerk publishable key from the same app as `sk_`.
+6. **Spaces / bad quotes** — prefer no quotes: `VITE_CLERK_PUBLISHABLE_KEY=pk_test_xxxx` (no spaces around `=`).
+
+On Vite start you should see:
+
+```text
+[wayzen] clerkPublishableKeyLoaded: true
+```
+
+If it prints `false`, the SPA will stay in guest / missing-key mode.
 
 ## Variable map
 
 | Variable | Who reads it | Required |
 | --- | --- | --- |
 | `VITE_CLERK_PUBLISHABLE_KEY` | SPA (preferred) | Yes for auth UI |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | SPA (alias) | Alternative to `VITE_*` |
-| `CLERK_PUBLISHABLE_KEY` | API (+ SPA via Vite bridge) | Recommended (same `pk_…` as above) |
-| `CLERK_SECRET_KEY` | API only (`sk_…`) | Yes for signed-in API / history |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | SPA (alias) | Alternative |
+| `CLERK_PUBLISHABLE_KEY` | API + SPA (bridged by Vite) | Recommended |
+| `CLERK_SECRET_KEY` | API only | Yes for history / sync |
 | `VITE_CLERK_PROXY_URL` / `NEXT_PUBLIC_CLERK_PROXY_URL` | SPA | Optional |
-| `WAYZEN_ADMIN_USER_IDS` | API | Optional (admin allowlist) |
+| `WAYZEN_ADMIN_USER_IDS` | API | Optional admin allowlist |
 
-Publishable + secret **must** belong to the **same** Clerk application. Add `http://127.0.0.1:5173` (and your preview host) to Clerk allowed origins / redirect URLs.
+Publishable + secret must be from the **same** Clerk application. Allow `http://127.0.0.1:5173` (and your preview host) in Clerk.
 
-## Exact lines for root `.env`
+## Exact root `.env` lines
+
+File: `<repo>/.env` (copy from `.env.example`).
 
 ```bash
-# Repo root: /path/to/my_wayzen/.env  (copy from .env.example)
-
-CLERK_PUBLISHABLE_KEY=pk_test_…          # same app as below
-CLERK_SECRET_KEY=sk_test_…               # server only — never VITE_/NEXT_PUBLIC_
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_…     # same pk_ as CLERK_PUBLISHABLE_KEY
-# Optional Next-style alias (also accepted):
+CLERK_PUBLISHABLE_KEY=pk_test_…
+CLERK_SECRET_KEY=sk_test_…
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_…
+# optional alias:
 # NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_…
 ```
 
-## Restart
+## Commands to verify
 
 ```bash
-# stop old terminals / tmux sessions, then:
-npm run dev:api    # loads root .env → :5055
-npm run dev:web    # loads root .env → :5173
+git pull origin cursor/vercel-neon-deploy-69f8
+# confirm tip includes check script:
+npm run check:clerk-env
+# expect: clerkPublishableKeyLoaded: true  and  clerkSecretKeyLoaded: true
+
+# fully restart (do not rely on HMR) — kill old Vite on :5173 first:
+# Ctrl+C both terminals / stop tmux, then:
+npm run dev:api
+npm run dev:web
+# Vite must listen on :5173 (not :5055). Log must include:
+#   [wayzen] clerkPublishableKeyLoaded: true
+
+# browser:
+open http://127.0.0.1:5173/sign-up
+# → Clerk widget (not missing-key banner)
 ```
 
-## Verify (no secrets in output)
+Note: root `.env` may contain `PORT=5055` for the API. `npm run dev:web` forces **5173** so that value does not bind Vite.
 
-1. API log on boot: **no** line `CLERK_SECRET_KEY unset — Clerk middleware disabled`.
-2. Open http://127.0.0.1:5173/sign-up — Clerk form/widget loads (not the “missing `VITE_CLERK_PUBLISHABLE_KEY`” banner).
-3. After sign-in: guest AI quota banner is gone / replaced by signed-in UX; favorites & chat history can sync.
-4. Optional: browser Network tab shows Clerk frontend API requests succeeding (not 401 from missing key).
+`npm run check:clerk-env` prints **yes/no only** — never secret values.
 
-## Loading paths
+## Loading paths (tip)
 
-| Process | Loads root `.env` via |
+| Process | How env is loaded |
 | --- | --- |
-| `npm run dev:api` | `node --env-file-if-exists=.env` + api-server `start --env-file-if-exists=../../.env` |
-| `npm run dev:web` | `node --env-file-if-exists=.env` + Vite `envDir` = monorepo root |
-| `npm run seed` / `db:push` | `--env-file-if-exists=../../.env` |
+| `npm run check:clerk-env` | Parses root + `artifacts/wayzen` `.env*` + `process.env` |
+| `npm run dev:web` | `node --env-file-if-exists=.env` + Vite merges **root and package** `.env*` + bridges `CLERK_PUBLISHABLE_KEY` → client define |
+| `npm run dev:api` | `node --env-file-if-exists=.env` + api-server `../../.env`; needs `CLERK_SECRET_KEY` |
 
-You do **not** need a separate `artifacts/wayzen/.env` if root `.env` is set.
+You do **not** need a separate `artifacts/wayzen/.env` if root `.env` is correct.

@@ -12,7 +12,7 @@
     "postinstall": "node ./scripts/ensure-tailwind-oxide.mjs",
     "dev": "node -e \"console.log('Run in two terminals:\\n  npm run dev:api\\n  npm run dev:web')\"",
     "dev:api": "PORT=${PORT:-5055} node --env-file-if-exists=.env ./scripts/run-api-dev.mjs",
-    "dev:web": "PORT=${PORT:-5173} BASE_PATH=${BASE_PATH:-/} node --env-file-if-exists=.env ./scripts/run-web-vite.mjs",
+    "dev:web": "BASE_PATH=${BASE_PATH:-/} node --env-file-if-exists=.env ./scripts/run-web-vite.mjs",
     "dev:web-next": "PORT=${PORT:-3000} node --env-file-if-exists=.env ./scripts/run-web-next.mjs dev",
     "build": "npm run typecheck && npm run build -w @workspace/api-server --if-present && npm run build:wayzen",
     "build:web": "node --env-file-if-exists=.env ./scripts/run-web-next.mjs build",
@@ -22,7 +22,8 @@
     "typecheck": "npm run typecheck:libs && npm run typecheck --workspaces --if-present",
     "seed": "npm run seed -w @workspace/db",
     "db:push": "npm run push -w @workspace/db",
-    "codegen": "npm run codegen -w @workspace/api-spec"
+    "codegen": "npm run codegen -w @workspace/api-spec",
+    "check:clerk-env": "node ./scripts/check-clerk-env.mjs"
   },
   "dependencies": {
     "@replit/connectors-sdk": "^0.4.3"

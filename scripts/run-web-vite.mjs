@@ -2,12 +2,16 @@
 /**
  * Start Vite SPA with repo-root `.env` already loaded
  * (`node --env-file-if-exists=.env ./scripts/run-web-vite.mjs`).
+ *
+ * Important: root `.env` often sets `PORT=5055` for the API. That must NOT
+ * bind the Vite dev server — force SPA port unless `VITE_DEV_PORT` is set.
  */
 import { spawn } from "node:child_process";
 
 const env = {
   ...process.env,
-  PORT: process.env.PORT || "5173",
+  // Prefer explicit Vite port; never inherit API PORT=5055 from root .env.
+  PORT: process.env.VITE_DEV_PORT || "5173",
   BASE_PATH: process.env.BASE_PATH || "/",
 };
 

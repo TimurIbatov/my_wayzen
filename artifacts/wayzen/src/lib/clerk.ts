@@ -2,6 +2,12 @@
  * Resolve Clerk publishable key for the current host.
  * Mirrors @clerk/shared/keys publishableKeyFromHost so auth keeps working after
  * @clerk/react no longer re-exports this helper from `@clerk/react/internal`.
+ *
+ * Accepted publishable key env names (first match wins):
+ *   __WAYZEN_CLERK_PUBLISHABLE_KEY__ (Vite define from root/package .env)
+ *   VITE_CLERK_PUBLISHABLE_KEY
+ *   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+ *   CLERK_PUBLISHABLE_KEY (bridged into the defines above at Vite config time)
  */
 
 function decodeClerkFrontendApi(key: string) {
@@ -19,11 +25,50 @@ function usablePublishableKey(key?: string) {
   if (!(value?.startsWith('pk_test_') || value?.startsWith('pk_live_'))) return undefined;
   const frontendApi = decodeClerkFrontendApi(value);
   // Local preview stub keys (e.g. preview-wayzen.example$) cannot load Clerk widgets.
-  if (!frontendApi || frontendApi.includes('example') || frontendApi.startsWith('preview-')) return undefined;
+  if (!frontendApi || frontendApi.includes('example') || frontendApi.startsWith('preview-')) {
+    return undefined;
+  }
   return value;
 }
 
-const envKey = () => usablePublishableKey(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+/** Resolve publishable key from any supported client env name. */
+export function resolveClerkPublishableKey(
+  ...candidates: Array<string | undefined>
+): string | undefined {
+  for (const candidate of candidates) {
+    const usable = usablePublishableKey(candidate);
+    if (usable) return usable;
+  }
+  return undefined;
+}
+
+function definedPublishableKey() {
+  try {
+    // Injected by vite.config.ts — empty string when unset.
+    return typeof __WAYZEN_CLERK_PUBLISHABLE_KEY__ === 'string'
+      ? __WAYZEN_CLERK_PUBLISHABLE_KEY__
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function definedProxyUrl() {
+  try {
+    return typeof __WAYZEN_CLERK_PROXY_URL__ === 'string'
+      ? __WAYZEN_CLERK_PROXY_URL__
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const envKey = () =>
+  resolveClerkPublishableKey(
+    definedPublishableKey(),
+    import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+    import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+  );
 
 /** True only when a real publishable key is provided via env (not host/preview synthesis). */
 export function isClerkConfigured() {
@@ -31,10 +76,20 @@ export function isClerkConfigured() {
 }
 
 export function publishableKeyFromHost(host: string, fallbackKey?: string): string {
-  const fromEnv = usablePublishableKey(fallbackKey) ?? envKey();
+  const fromEnv = resolveClerkPublishableKey(fallbackKey) ?? envKey();
   if (fromEnv) return fromEnv;
   const hostname = host.toLowerCase().replace(/:\d+$/, '');
   if (!hostname) throw new Error('Host must not be empty.');
   const encoded = btoa(`clerk.${hostname}$`).replace(/=+$/, '');
   return `pk_live_${encoded}`;
+}
+
+export function resolveClerkProxyUrl(): string | undefined {
+  const value = (
+    definedProxyUrl() ||
+    import.meta.env.VITE_CLERK_PROXY_URL ||
+    import.meta.env.NEXT_PUBLIC_CLERK_PROXY_URL ||
+    ''
+  ).trim();
+  return value || undefined;
 }

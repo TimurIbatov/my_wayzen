@@ -18,14 +18,22 @@ export function Onboarding() {
   const [, setLocation] = useLocation();
   const client = useQueryClient();
   const profile = useGetProfile({ query: { queryKey: getGetProfileQueryKey(), enabled: Boolean(isSignedIn) } });
-  const update = useUpdateProfile({ mutation: { onSuccess: () => { void client.invalidateQueries({ queryKey: getGetProfileQueryKey() }); setLocation('/user-portal'); } } });
+  const update = useUpdateProfile({
+    mutation: {
+      onSuccess: () => {
+        void client.invalidateQueries({ queryKey: getGetProfileQueryKey() });
+        void client.invalidateQueries({ queryKey: ['places', 'recommended'] });
+        setLocation('/user-portal');
+      },
+    },
+  });
   const form = useForm<ProfileForm>({ defaultValues: { interests: [], pace: 'slow', budget: 'moderate', travelStyle: '' } });
   useEffect(() => { if (profile.data) form.reset({ interests: profile.data.interests, pace: profile.data.pace, budget: profile.data.budget, travelStyle: profile.data.travelStyle }); }, [profile.data?.interests.join('|'), profile.data?.pace, profile.data?.budget, profile.data?.travelStyle]);
   if (!isSignedIn) return <main className="wrap load-shell"><div className="empty"><div className="empty-icon"><Compass size={22} /></div><span className="eyebrow">Начало пути</span><h2>Сначала создайте аккаунт.</h2><p>Подбор предпочтений привяжется к вашему WayZen-профилю. Каталог остаётся доступным без входа.</p><Link className="btn btn-primary" href="/sign-up" data-testid="link-onboarding-sign-up">Создать аккаунт <ArrowRight size={15} /></Link></div></main>;
   if (profile.isLoading) return <main className="wrap load-shell"><div className="skeleton" style={{ height: 360, borderRadius: 20 }} /></main>;
   if (profile.isError) return <main className="wrap load-shell"><LoadError error={profile.error} onRetry={() => void profile.refetch()} /></main>;
   return <main className="wrap">
-    <div className="intro"><span className="eyebrow">01 / 01 · Знакомство</span><h1 className="display">Как вы любите путешествовать?</h1><p>Выберите несколько ориентиров — их всегда можно изменить позже. WayZen использует их для генерации идей и ничего не обещает о фактической доступности.</p></div>
+    <div className="intro"><span className="eyebrow">01 / 01 · Знакомство</span><h1 className="display">Как вы любите путешествовать?</h1><p>Выберите интересы — после сохранения главная «Для вас» ранжирует архив по категориям и тегам. Это не верификация мест и не обещание доступности.</p></div>
     <div className="profile-grid"><section className="panel"><Form {...form}><form onSubmit={form.handleSubmit(values => update.mutate({ data: values }))} data-testid="form-onboarding">
       <FormField control={form.control} name="interests" render={({ field }) => <FormItem className="field-label"><FormLabel>Что вас притягивает?</FormLabel><div className="check-row">{interestsList.map(item => <label className="check-chip" key={item}><input type="checkbox" checked={field.value.includes(item)} onChange={event => field.onChange(event.target.checked ? [...field.value, item] : field.value.filter(value => value !== item))} data-testid={`onboarding-interest-${item}`} />{item}</label>)}</div></FormItem>} />
       <div className="form-grid"><FormField control={form.control} name="pace" render={({ field }) => <FormItem className="field-label"><FormLabel>Ваш темп</FormLabel><FormControl><select className="select" {...field} data-testid="onboarding-pace"><option value="slow">Медленный</option><option value="balanced">Сбалансированный</option><option value="packed">Насыщенный</option></select></FormControl></FormItem>} /><FormField control={form.control} name="budget" render={({ field }) => <FormItem className="field-label"><FormLabel>Предпочтение бюджета</FormLabel><FormControl><select className="select" {...field} data-testid="onboarding-budget"><option value="budget">Бюджетный</option><option value="moderate">Умеренный</option><option value="comfort">Комфорт</option></select></FormControl></FormItem>} /></div>

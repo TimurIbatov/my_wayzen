@@ -47,12 +47,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // Clerk auth is optional for local/catalog reads. Without CLERK_SECRET_KEY the
 // middleware throws on every request — skip it so public archive routes still work.
-if (process.env.CLERK_SECRET_KEY) {
+const clerkSecretKey = process.env.CLERK_SECRET_KEY?.trim();
+const clerkPublishableKey =
+  process.env.CLERK_PUBLISHABLE_KEY?.trim() ||
+  process.env.VITE_CLERK_PUBLISHABLE_KEY?.trim() ||
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+if (clerkSecretKey) {
   app.use(
     clerkMiddleware((req) => ({
+      secretKey: clerkSecretKey,
       publishableKey: publishableKeyFromHost(
         getClerkProxyHost(req) ?? "",
-        process.env.CLERK_PUBLISHABLE_KEY,
+        clerkPublishableKey,
       ),
     })),
   );

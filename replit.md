@@ -33,6 +33,10 @@ npm run build:wayzen
 # Or explicitly:
 PORT=5173 BASE_PATH=/ npm run build -w @workspace/wayzen
 
+# Vercel + Neon Phase 1 (Next catalog API) — see docs/deploy-vercel-neon.md
+npm run dev:web-next
+npm run build:web
+
 # After OpenAPI changes
 npm run codegen
 # equivalent: npm run codegen -w @workspace/api-spec
@@ -67,10 +71,13 @@ Never commit real secrets. Use placeholders / local secrets managers only.
 | `SESSION_SECRET` | API | Signs guest AI cookies |
 | `GEMINI_API_KEY` | API | WayZen AI routes + chat |
 | `GEMINI_MODEL` | API | Optional; default `gemini-2.5-flash-lite` |
-| `CLERK_PUBLISHABLE_KEY` | API | Clerk publishable key (server middleware) |
-| `CLERK_SECRET_KEY` | API | Clerk secret (proxy / production) |
-| `VITE_CLERK_PUBLISHABLE_KEY` | Frontend | Clerk publishable key for the SPA |
+| `CLERK_PUBLISHABLE_KEY` | API (+ SPA bridge) | Clerk publishable key |
+| `CLERK_SECRET_KEY` | API | Clerk secret (required for signed-in API) |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Frontend | Preferred SPA publishable key |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Frontend | Alias accepted by SPA |
 | `VITE_CLERK_PROXY_URL` | Frontend | Optional Clerk proxy URL |
+
+Clerk details / restart checklist: `docs/clerk-env.md`
 | `WAYZEN_ADMIN_USER_IDS` | API | Comma-separated Clerk user IDs with admin place tools |
 | `STRIPE_SECRET_KEY` | API | Stripe secret for Trip Pass Checkout |
 | `STRIPE_WEBHOOK_SECRET` | API | Stripe webhook signature secret |

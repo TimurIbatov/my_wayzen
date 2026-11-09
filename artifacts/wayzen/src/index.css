@@ -309,13 +309,54 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .wz-lang-menu{position:absolute;bottom:calc(100% + 8px);inset-inline-start:50%;transform:translateX(-50%);min-width:160px;margin:0;padding:6px;list-style:none;border-radius:14px;border:1px solid var(--wz-line);background:#121820;box-shadow:0 18px 40px rgba(0,0,0,.35);z-index:50}
 .wz-lang-menu button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;border:0;background:transparent;color:var(--wz-text);padding:10px 12px;border-radius:10px;cursor:pointer;font-size:12px}
 .wz-lang-menu button:hover,.wz-lang-menu button.active{background:rgba(45,212,191,.12);color:var(--wz-teal)}
-.wz-auth-night{background:var(--wz-bg)!important;color:var(--wz-text)}
-.wz-auth-night .auth-story{background:linear-gradient(160deg,#0f3d38,#149e8d 70%,#2dd4bf)}
-.wz-auth-night .auth-card{background:#151c26;border:1px solid #334155;color:#e8eef2;min-height:280px;display:flex;align-items:center}
+/* Preference recommendations */
+.wz-rec-card{display:grid;gap:8px}
+.wz-rec-reasons{margin:0;padding:0 4px 4px;color:var(--wz-muted);font-size:12px;line-height:1.5}
+
+/* Auth — same Netlify night surface as landing (overrides legacy cream .auth-*) */
+.wz-auth-page{position:relative;min-height:100dvh;display:flex;flex-direction:column;overflow:hidden;isolation:isolate;color:var(--wz-text)}
+.wz-auth-center{position:relative;z-index:10;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(22px,4vh,36px);padding:clamp(72px,10vh,110px) 20px 40px}
+.wz-auth-hero{width:min(520px,100%);text-align:center;animation:wz-rise .65s cubic-bezier(.2,.7,.2,1) both}
+.wz-auth-brand{display:inline-block;margin:0;font:800 clamp(2.6rem,7vw,3.6rem)/1 var(--app-font-sans);letter-spacing:-.04em;color:#fff;font-style:italic;text-decoration:none}
+.wz-auth-brand:hover{color:#5eead4}
+.wz-auth-tagline{margin:.85rem 0 0;color:var(--wz-teal);font:600 1rem/1.4 var(--app-font-sans)}
+.wz-auth-title{margin:1rem 0 0;font:800 clamp(1.6rem,3.5vw,2.1rem)/1.15 var(--app-font-sans);letter-spacing:-.03em;color:#fff}
+.wz-auth-lead{margin:.75rem auto 0;max-width:28rem;color:#94a3b8;font:400 .95rem/1.65 var(--app-font-sans)}
+.wz-auth-panel{position:relative;z-index:10;width:min(440px,100%);animation:wz-rise .75s cubic-bezier(.2,.7,.2,1) .05s both}
+.wz-auth-clerk{border:1px solid rgba(51,65,85,.85);border-radius:22px;background:rgba(18,24,32,.88);backdrop-filter:blur(18px);box-shadow:0 24px 60px rgba(0,0,0,.35);padding:18px 16px 8px;min-height:280px;display:flex;align-items:center;justify-content:center}
+.wz-auth-stamp{margin:14px 0 0;text-align:center;color:#64748b;font:600 11px/1.5 var(--app-font-mono);letter-spacing:.08em}
 .wz-auth-missing{display:grid;gap:14px;padding:12px;width:100%}
 .wz-auth-missing h2{margin:0;font:700 24px var(--app-font-sans);color:#f8fafc}
 .wz-auth-missing p{margin:0;color:#cbd5e1;line-height:1.65;font-size:13px}
 .wz-auth-missing code{display:block;padding:10px 12px;border-radius:12px;background:#0b1220;border:1px solid #334155;color:#2dd4bf;font:12px var(--app-font-mono);overflow:auto}
+.wz-auth-missing .wz-cta-primary{justify-self:start;min-height:2.75rem;padding:0 1.4rem;font-size:.95rem}
+/* Clerk widgets — dark Netlify tokens (class hooks from appearance.elements) */
+.wz-auth-clerk .wz-cl-root,.wz-auth-clerk .cl-rootBox{width:100%;display:flex;justify-content:center}
+.wz-auth-clerk .wz-cl-cardBox,.wz-auth-clerk .cl-cardBox{width:100%;max-width:100%;box-shadow:none!important;border:0!important;background:transparent!important}
+.wz-auth-clerk .wz-cl-card,.wz-auth-clerk .cl-card{background:transparent!important;box-shadow:none!important;border:0!important;width:100%}
+.wz-auth-clerk .wz-cl-title,.wz-auth-clerk .cl-headerTitle{color:#f8fafc!important;font:700 1.35rem/1.2 Outfit,system-ui,sans-serif!important}
+.wz-auth-clerk .wz-cl-subtitle,.wz-auth-clerk .cl-headerSubtitle,.wz-auth-clerk .wz-cl-muted,.wz-auth-clerk .cl-dividerText,.wz-auth-clerk .cl-footerActionText{color:#94a3b8!important}
+.wz-auth-clerk .wz-cl-label,.wz-auth-clerk .cl-formFieldLabel{color:#e2e8f0!important}
+.wz-auth-clerk .wz-cl-input,.wz-auth-clerk .cl-formFieldInput,.wz-auth-clerk .cl-otpCodeFieldInput{
+  background:#0b1220!important;border:1px solid #334155!important;color:#e8eef2!important;border-radius:12px!important;
+}
+.wz-auth-clerk .wz-cl-input:focus,.wz-auth-clerk .cl-formFieldInput:focus{border-color:#2dd4bf!important;box-shadow:0 0 0 3px rgba(45,212,191,.18)!important}
+.wz-auth-clerk .wz-cl-primary,.wz-auth-clerk .cl-formButtonPrimary{
+  background:linear-gradient(90deg,#7c3aed,#4f46e5)!important;color:#fff!important;border:0!important;
+  border-radius:999px!important;box-shadow:0 10px 28px rgba(124,58,237,.28)!important;font-weight:600!important;
+}
+.wz-auth-clerk .wz-cl-primary:hover,.wz-auth-clerk .cl-formButtonPrimary:hover{background:linear-gradient(90deg,#6d28d9,#4338ca)!important}
+.wz-auth-clerk .wz-cl-social,.wz-auth-clerk .cl-socialButtonsBlockButton{
+  background:#121820!important;border:1px solid #334155!important;color:#e8eef2!important;border-radius:12px!important;
+}
+.wz-auth-clerk .wz-cl-social-text,.wz-auth-clerk .cl-socialButtonsBlockButtonText{color:#e8eef2!important}
+.wz-auth-clerk .wz-cl-divider,.wz-auth-clerk .cl-dividerLine{background:#334155!important}
+.wz-auth-clerk .wz-cl-link,.wz-auth-clerk .cl-footerActionLink,.wz-auth-clerk .cl-identityPreviewEditButton{color:#2dd4bf!important}
+.wz-auth-clerk .wz-cl-footer,.wz-auth-clerk .cl-footer{background:transparent!important;box-shadow:none!important;border:0!important}
+.wz-auth-clerk .wz-cl-alert,.wz-auth-clerk .cl-alert{background:#2a1d22!important;border-color:#7f1d1d!important}
+.wz-auth-clerk .wz-cl-alert-text,.wz-auth-clerk .cl-alertText{color:#f07167!important}
+/* Legacy cream auth layout — neutralized when unused */
+.wz-auth-night{background:var(--wz-bg)!important;color:var(--wz-text)}
 html[dir="rtl"] .wz-side-brand{transform:rotate(0deg)}
 html[dir="rtl"] .wz-lang-menu{transform:translateX(50%)}
 @media(max-width:900px){

@@ -1,10 +1,14 @@
 import { Compass } from 'lucide-react';
 import { Link } from 'wouter';
+import { useAuth } from '@/lib/auth';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useI18n } from '@/lib/i18n';
 
 export function Landing() {
   const { t } = useI18n();
+  const { isSignedIn } = useAuth();
+  const primaryHref = isSignedIn ? '/user-portal' : '/onboarding';
+  const primaryLabel = isSignedIn ? 'К подборке для вас' : t('landing.ctaStart');
 
   return (
     <main className="wz-landing" data-testid="page-landing">
@@ -27,13 +31,19 @@ export function Landing() {
           </h2>
           <p className="wz-landing-lead" data-testid="text-landing-lead">{t('landing.lead')}</p>
           <div className="wz-landing-actions">
-            <Link className="wz-cta-primary" href="/ai" data-testid="link-start-journey">
+            <Link className="wz-cta-primary" href={primaryHref} data-testid="link-start-journey">
               <Compass size={20} aria-hidden />
-              {t('landing.ctaStart')}
+              {primaryLabel}
             </Link>
-            <Link className="wz-cta-outline" href="/sign-in" data-testid="link-landing-sign-in">
-              {t('landing.ctaSignIn')}
-            </Link>
+            {isSignedIn ? (
+              <Link className="wz-cta-outline" href="/places" data-testid="link-landing-atlas">
+                Атлас
+              </Link>
+            ) : (
+              <Link className="wz-cta-outline" href="/sign-in" data-testid="link-landing-sign-in">
+                {t('landing.ctaSignIn')}
+              </Link>
+            )}
           </div>
         </div>
       </div>

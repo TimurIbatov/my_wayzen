@@ -29,6 +29,23 @@ const guestAuth: AuthValue = {
   addListener: () => () => undefined,
 };
 
+/** Local-only signed-in stub when Clerk keys are missing (Vite `VITE_WAYZEN_DEV_AUTH=1`). */
+const localDevAuth: AuthValue = {
+  isLoaded: true,
+  isSignedIn: true,
+  getToken: async () => 'dev-local',
+  signOut: async () => undefined,
+  addListener: () => () => undefined,
+};
+
+function isLocalDevAuthEnabled() {
+  try {
+    return import.meta.env.VITE_WAYZEN_DEV_AUTH === '1';
+  } catch {
+    return false;
+  }
+}
+
 const AuthContext = createContext<AuthValue>(guestAuth);
 
 function ClerkAuthBridge({ children }: { children: ReactNode }) {
@@ -79,7 +96,8 @@ type AuthShellProps = {
  */
 export function AuthShell({ children, routerPush, routerReplace }: AuthShellProps) {
   if (!isClerkConfigured()) {
-    return <AuthContext.Provider value={guestAuth}>{children}</AuthContext.Provider>;
+    const value = isLocalDevAuthEnabled() ? localDevAuth : guestAuth;
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
   }
 
   const clerkPubKey = publishableKeyFromHost(

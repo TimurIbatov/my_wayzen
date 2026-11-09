@@ -436,3 +436,23 @@ category?: string;
 region?: string;
 };
 
+export type ListRecommendedPlaces200Mode = typeof ListRecommendedPlaces200Mode[keyof typeof ListRecommendedPlaces200Mode];
+
+
+export const ListRecommendedPlaces200Mode = {
+  personalized: 'personalized',
+  empty_prefs: 'empty_prefs',
+  no_matches: 'no_matches',
+} as const;
+
+export type ListRecommendedPlaces200PlacesItem = Place & {
+  matchScore?: number;
+  matchReasons?: string[];
+};
+
+export type ListRecommendedPlaces200 = {
+  mode: ListRecommendedPlaces200Mode;
+  interests: string[];
+  places: ListRecommendedPlaces200PlacesItem[];
+};
+

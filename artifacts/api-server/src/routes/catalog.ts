@@ -11,6 +11,7 @@ import {
   ListAdminPlacesResponse,
   ListPlacesQueryParams,
   ListPlacesResponse,
+  ListRecommendedPlacesResponse,
   UpdatePlaceBody,
   UpdatePlaceParams,
   UpdatePlaceResponse,
@@ -84,23 +85,27 @@ router.get("/places/recommended", async (req, res) => {
       .orderBy(asc(placesTable.nameEn));
 
     if (!interests.length) {
-      return res.json({
-        mode: "empty_prefs" as const,
-        interests: [],
-        places: [],
-      });
+      return res.json(
+        ListRecommendedPlacesResponse.parse({
+          mode: "empty_prefs",
+          interests: [],
+          places: [],
+        }),
+      );
     }
 
     const ranked = rankPlacesByInterests(places, interests, 8);
-    return res.json({
-      mode: ranked.length ? ("personalized" as const) : ("no_matches" as const),
-      interests,
-      places: ranked.map(({ place, score, reasons }) => ({
-        ...place,
-        matchScore: score,
-        matchReasons: reasons,
-      })),
-    });
+    return res.json(
+      ListRecommendedPlacesResponse.parse({
+        mode: ranked.length ? "personalized" : "no_matches",
+        interests,
+        places: ranked.map(({ place, score, reasons }) => ({
+          ...place,
+          matchScore: score,
+          matchReasons: reasons,
+        })),
+      }),
+    );
   } catch {
     return sendServerError(res);
   }

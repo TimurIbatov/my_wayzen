@@ -1,20 +1,14 @@
-import { customFetch, type Place } from '@workspace/api-client-react';
+import {
+  listRecommendedPlaces,
+  type ListRecommendedPlaces200,
+  type ListRecommendedPlaces200PlacesItem,
+} from '@workspace/api-client-react';
 
-export type RecommendedMode = 'personalized' | 'empty_prefs' | 'no_matches';
+export type RecommendedMode = ListRecommendedPlaces200['mode'];
+export type RecommendedPlace = ListRecommendedPlaces200PlacesItem;
+export type RecommendedResponse = ListRecommendedPlaces200;
 
-export type RecommendedPlace = Place & {
-  matchScore: number;
-  matchReasons: string[];
-};
-
-export type RecommendedResponse = {
-  mode: RecommendedMode;
-  interests: string[];
-  places: RecommendedPlace[];
-};
-
+/** Thin wrapper over the Orval-generated client (same customFetch path). */
 export async function fetchRecommendedPlaces(): Promise<RecommendedResponse> {
-  return customFetch<RecommendedResponse>('/api/places/recommended', {
-    method: 'GET',
-  });
+  return listRecommendedPlaces();
 }

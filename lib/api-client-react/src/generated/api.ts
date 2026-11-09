@@ -35,6 +35,7 @@ import type {
   GeneratedRoute,
   HealthStatus,
   ListPlacesParams,
+  ListRecommendedPlaces200,
   Overview,
   Place,
   PlaceInput,
@@ -277,6 +278,108 @@ export function useListPlaces<TData = Awaited<ReturnType<typeof listPlaces>>, TE
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getListPlacesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListRecommendedPlacesUrl = () => {
+
+
+
+
+  return `/api/places/recommended`
+}
+
+/**
+ * Deterministic preference ranking for the signed-in traveler. Scores category/tag/kind overlap with profile interests. Does not invent verification status. Guests receive 401.
+ * @summary Rank public places by traveler interest overlap (signed-in)
+ */
+export const listRecommendedPlaces = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListRecommendedPlaces200> => {
+
+  return customFetch<ListRecommendedPlaces200>(getListRecommendedPlacesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListRecommendedPlacesQueryKey = () => {
+    return [
+    `/api/places/recommended`
+    ] as const;
+    }
+
+
+export const getListRecommendedPlacesQueryOptions = <TData = Awaited<ReturnType<typeof listRecommendedPlaces>>, TError = ErrorType<Error>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecommendedPlaces>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRecommendedPlacesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRecommendedPlaces>>> = ({ signal }) => listRecommendedPlaces({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRecommendedPlaces>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListRecommendedPlacesQueryResult = NonNullable<Awaited<ReturnType<typeof listRecommendedPlaces>>>
+export type ListRecommendedPlacesQueryError = ErrorType<Error>
+
+
+export function useListRecommendedPlaces<TData = Awaited<ReturnType<typeof listRecommendedPlaces>>, TError = ErrorType<Error>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecommendedPlaces>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listRecommendedPlaces>>,
+          TError,
+          Awaited<ReturnType<typeof listRecommendedPlaces>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListRecommendedPlaces<TData = Awaited<ReturnType<typeof listRecommendedPlaces>>, TError = ErrorType<Error>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecommendedPlaces>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listRecommendedPlaces>>,
+          TError,
+          Awaited<ReturnType<typeof listRecommendedPlaces>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListRecommendedPlaces<TData = Awaited<ReturnType<typeof listRecommendedPlaces>>, TError = ErrorType<Error>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecommendedPlaces>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Rank public places by traveler interest overlap (signed-in)
+ */
+
+export function useListRecommendedPlaces<TData = Awaited<ReturnType<typeof listRecommendedPlaces>>, TError = ErrorType<Error>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecommendedPlaces>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListRecommendedPlacesQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

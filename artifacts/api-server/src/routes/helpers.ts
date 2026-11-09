@@ -13,19 +13,35 @@ export function requireUserId(req: Request, res: Response): string | null {
 export function getUserId(req: Request): string | null {
   // When CLERK_SECRET_KEY is unset, clerkMiddleware is not mounted and getAuth throws.
   // Treat that as signed-out so public catalog still works and gated routes return 401.
-  let auth: ReturnType<typeof getAuth>;
   try {
-    auth = getAuth(req);
+    const auth = getAuth(req);
+    const claimUserId = (
+      auth.sessionClaims as { userId?: unknown } | null | undefined
+    )?.userId;
+    const userId =
+      typeof claimUserId === "string" ? claimUserId : auth.userId;
+    if (userId) return userId;
   } catch {
-    return null;
+    // Clerk middleware not mounted — fall through to optional local stub.
   }
-  const claimUserId = (
-    auth.sessionClaims as { userId?: unknown } | null | undefined
-  )?.userId;
-  const userId =
-    typeof claimUserId === "string" ? claimUserId : auth.userId;
 
-  return userId ?? null;
+  // Local-only signed-in stub when Clerk is unset (never in production).
+  // SPA sets Authorization: Bearer dev-local via VITE_WAYZEN_DEV_AUTH=1.
+  const clerkSecret = process.env.CLERK_SECRET_KEY?.trim();
+  const devUserId = process.env.WAYZEN_DEV_USER_ID?.trim();
+  if (!clerkSecret && process.env.NODE_ENV !== "production" && devUserId) {
+    const headerUser = req.header("x-wayzen-dev-user")?.trim();
+    if (headerUser === devUserId) return devUserId;
+    const authorization = req.header("authorization")?.trim();
+    if (
+      authorization === `Bearer ${devUserId}` ||
+      authorization === "Bearer dev-local"
+    ) {
+      return devUserId;
+    }
+  }
+
+  return null;
 }
 
 export function isWayZenAdmin(userId: string): boolean {

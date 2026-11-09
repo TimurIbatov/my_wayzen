@@ -55,6 +55,44 @@ export const ListPlacesResponse = zod.array(ListPlacesResponseItem)
 
 
 /**
+ * Deterministic preference ranking for the signed-in traveler. Scores category/tag/kind overlap with profile interests. Does not invent verification status. Guests receive 401.
+ * @summary Rank public places by traveler interest overlap (signed-in)
+ */
+export const ListRecommendedPlacesResponse = zod.object({
+  "mode": zod.enum(['personalized', 'empty_prefs', 'no_matches']),
+  "interests": zod.array(zod.string()),
+  "places": zod.array(zod.object({
+  "id": zod.number().int(),
+  "slug": zod.string(),
+  "nameRu": zod.string(),
+  "nameEn": zod.string(),
+  "nameUz": zod.string().nullable(),
+  "latitude": zod.number(),
+  "longitude": zod.number(),
+  "region": zod.string(),
+  "category": zod.string(),
+  "kind": zod.string(),
+  "summaryRu": zod.string(),
+  "summaryEn": zod.string(),
+  "storyRu": zod.string(),
+  "storyEn": zod.string(),
+  "practicalNotesRu": zod.string(),
+  "practicalNotesEn": zod.string(),
+  "imageUrls": zod.array(zod.string()),
+  "tags": zod.array(zod.string()),
+  "seasonality": zod.array(zod.string()),
+  "accessDifficulty": zod.string(),
+  "verificationStatus": zod.enum(['draft', 'preliminary', 'verified', 'stale']),
+  "source": zod.string(),
+  "updatedAt": zod.coerce.date()
+}).and(zod.object({
+  "matchScore": zod.number().optional(),
+  "matchReasons": zod.array(zod.string()).optional()
+})))
+})
+
+
+/**
  * @summary Get a place by its slug
  */
 

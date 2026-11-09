@@ -26,7 +26,14 @@ export function ProfilePage() {
   const [offlinePreviewOpen, setOfflinePreviewOpen] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const profile = useGetProfile({ query: { queryKey: getGetProfileQueryKey(), enabled: Boolean(isSignedIn), staleTime: 20_000 } });
-  const update = useUpdateProfile({ mutation: { onSuccess: () => void client.invalidateQueries({ queryKey: getGetProfileQueryKey() }) } });
+  const update = useUpdateProfile({
+    mutation: {
+      onSuccess: () => {
+        void client.invalidateQueries({ queryKey: getGetProfileQueryKey() });
+        void client.invalidateQueries({ queryKey: ['places', 'recommended'] });
+      },
+    },
+  });
   const pass = useActivateDemoTripPass({ mutation: { onSuccess: () => void client.invalidateQueries({ queryKey: getGetProfileQueryKey() }) } });
   const checkout = useCreateTripPassCheckout();
   const form = useForm<ProfileForm>({ defaultValues: { interests: [], pace: 'slow', budget: 'moderate', travelStyle: '' } });

@@ -53,6 +53,46 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/Place" }
+  /places/recommended:
+    get:
+      operationId: listRecommendedPlaces
+      tags: [places]
+      summary: Rank public places by traveler interest overlap (signed-in)
+      description: >
+        Deterministic preference ranking for the signed-in traveler.
+        Scores category/tag/kind overlap with profile interests.
+        Does not invent verification status. Guests receive 401.
+      responses:
+        "200":
+          description: Ranked recommendations or empty_prefs / no_matches mode
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [mode, interests, places]
+                properties:
+                  mode:
+                    type: string
+                    enum: [personalized, empty_prefs, no_matches]
+                  interests:
+                    type: array
+                    items: { type: string }
+                  places:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/Place"
+                        - type: object
+                          properties:
+                            matchScore: { type: number }
+                            matchReasons:
+                              type: array
+                              items: { type: string }
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /places/{slug}:
     get:
       operationId: getPlace

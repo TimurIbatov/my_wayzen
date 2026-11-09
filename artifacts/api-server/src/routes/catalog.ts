@@ -16,8 +16,11 @@ import {
   UpdatePlaceResponse,
 } from "@workspace/api-zod";
 import { db, placesTable } from "@workspace/db";
+import { rankPlacesByInterests } from "../lib/recommendations";
+import { getOrCreateTravelerProfile } from "../lib/travelerProfiles";
 import {
   requireAdminId,
+  requireUserId,
   isUniqueViolation,
   sendInvalidInput,
   sendServerError,
@@ -59,6 +62,45 @@ router.get("/places", async (req, res) => {
       )
       .orderBy(asc(placesTable.nameEn));
     return res.json(ListPlacesResponse.parse(places));
+  } catch {
+    return sendServerError(res);
+  }
+});
+
+/**
+ * Preference overlap ranking for the signed-in traveler.
+ * Must be registered before `/places/:slug` so "recommended" is not treated as a slug.
+ */
+router.get("/places/recommended", async (req, res) => {
+  const userId = requireUserId(req, res);
+  if (!userId) return;
+  try {
+    const profile = await getOrCreateTravelerProfile(userId);
+    const interests = profile.interests ?? [];
+    const places = await db
+      .select()
+      .from(placesTable)
+      .where(ne(placesTable.verificationStatus, "draft"))
+      .orderBy(asc(placesTable.nameEn));
+
+    if (!interests.length) {
+      return res.json({
+        mode: "empty_prefs" as const,
+        interests: [],
+        places: [],
+      });
+    }
+
+    const ranked = rankPlacesByInterests(places, interests, 8);
+    return res.json({
+      mode: ranked.length ? ("personalized" as const) : ("no_matches" as const),
+      interests,
+      places: ranked.map(({ place, score, reasons }) => ({
+        ...place,
+        matchScore: score,
+        matchReasons: reasons,
+      })),
+    });
   } catch {
     return sendServerError(res);
   }

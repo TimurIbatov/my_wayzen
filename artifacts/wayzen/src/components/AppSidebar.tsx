@@ -1,4 +1,4 @@
-import { Bookmark, Compass, GitBranch, Map as MapIcon, MessageCircle } from 'lucide-react';
+import { Bookmark, Compass, GitBranch, Map as MapIcon, MessageCircle, Sparkles } from 'lucide-react';
 import { useAuth, useClerk } from '@/lib/auth';
 import { Link, useLocation } from 'wouter';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -13,6 +13,9 @@ export function AppSidebar({ favoriteCount }: { favoriteCount: number }) {
   const code = LOCALES.find(item => item.id === locale)?.short ?? 'RU';
 
   const links = [
+    ...(isSignedIn
+      ? [{ href: '/user-portal', label: 'Для вас', icon: Sparkles, test: 'for-you' } as const]
+      : []),
     { href: '/ai', label: t('nav.ai'), icon: MessageCircle, test: 'ai' },
     { href: '/map', label: t('nav.map'), icon: MapIcon, test: 'map' },
     { href: '/places', label: t('nav.places'), icon: GitBranch, test: 'places' },

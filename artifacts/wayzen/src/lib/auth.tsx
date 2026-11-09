@@ -5,7 +5,6 @@ import {
   type ReactNode,
 } from 'react';
 import { ClerkProvider, useAuth as useClerkAuth, useClerk as useClerkApi } from '@clerk/react';
-import { shadcn } from '@clerk/themes';
 import {
   isClerkConfigured,
   publishableKeyFromHost,
@@ -97,52 +96,24 @@ export function AuthShell({ children, routerPush, routerReplace }: AuthShellProp
     <ClerkProvider
       publishableKey={clerkPubKey}
       proxyUrl={clerkProxyUrl}
+      // Page-level SignIn/SignUp set the dark Netlify appearance.
+      // Keep provider lean so shadcn/light defaults do not fight the shell.
       appearance={{
-        theme: shadcn,
         cssLayerName: 'clerk',
         options: {
-          logoPlacement: 'inside',
           logoLinkUrl: basePath || '/',
-          logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
         },
         variables: {
           colorPrimary: '#2dd4bf',
           colorForeground: '#e8eef2',
-          colorMutedForeground: '#9aa8b2',
+          colorMutedForeground: '#94a3b8',
           colorDanger: '#f07167',
-          colorBackground: '#121820',
-          colorInput: '#1a222c',
+          colorBackground: 'transparent',
+          colorInput: '#121820',
           colorInputForeground: '#e8eef2',
-          colorNeutral: '#2a3440',
-          fontFamily: 'Manrope, sans-serif',
+          colorNeutral: '#334155',
+          fontFamily: 'Outfit, system-ui, sans-serif',
           borderRadius: '0.9rem',
-        },
-        elements: {
-          rootBox: 'w-full flex justify-center',
-          cardBox: 'bg-[#121820] rounded-2xl w-[440px] max-w-full overflow-hidden shadow-none border border-[#2a3440]',
-          card: '!shadow-none !border-0 !bg-transparent !rounded-none',
-          footer: '!shadow-none !border-0 !bg-transparent !rounded-none',
-          headerTitle: 'text-[#e8eef2] font-semibold',
-          headerSubtitle: 'text-[#9aa8b2]',
-          socialButtonsBlockButtonText: 'text-[#e8eef2]',
-          formFieldLabel: 'text-[#e8eef2]',
-          footerActionLink: 'text-[#2dd4bf]',
-          footerActionText: 'text-[#9aa8b2]',
-          dividerText: 'text-[#9aa8b2]',
-          identityPreviewEditButton: 'text-[#2dd4bf]',
-          formFieldSuccessText: 'text-[#2dd4bf]',
-          alertText: 'text-[#f07167]',
-          logoBox: 'rounded-xl',
-          logoImage: 'object-contain',
-          socialButtonsBlockButton: 'border-[#2a3440] bg-[#1a222c]',
-          formButtonPrimary: 'bg-[#2dd4bf] text-[#0b1218]',
-          formFieldInput: 'border-[#2a3440] bg-[#1a222c] text-[#e8eef2]',
-          footerAction: 'text-[#9aa8b2]',
-          dividerLine: 'bg-[#2a3440]',
-          alert: 'bg-[#2a1d22]',
-          otpCodeFieldInput: 'border-[#2a3440] bg-[#1a222c] text-[#e8eef2]',
-          formFieldRow: 'text-[#e8eef2]',
-          main: 'text-[#e8eef2]',
         },
       }}
       signInUrl={`${basePath}/sign-in`}
